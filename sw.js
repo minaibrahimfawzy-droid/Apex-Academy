@@ -1,6 +1,6 @@
-const CACHE_NAME = 'apex-v15';
+const CACHE_NAME = 'apex-v20'; //[cite: 2]
 
-// الملفات الأساسية للتخزين السريع
+// الملفات الأساسية للتخزين السريع[cite: 2]
 const INITIAL_ASSETS = [
     './',
     './index.html',
@@ -20,14 +20,14 @@ const INITIAL_ASSETS = [
     './js/groups.js'
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (event) => { //[cite: 2]
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(INITIAL_ASSETS))
     );
     self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', (event) => { //[cite: 2]
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// استراتيجية Cache First مع حفظ أي ملف يُطلب تلقائياً
+// استراتيجية Cache First مع حفظ أي ملف يُطلب تلقائياً[cite: 2]
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
