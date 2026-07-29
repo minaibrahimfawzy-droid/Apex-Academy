@@ -1,38 +1,31 @@
-const CACHE_NAME = 'apex-v25';
+const CACHE_NAME = 'apex-v28';[cite: 3]
 
-// الملفات الأساسية للتخزين السريع[cite: 2]
+// الملفات الأساسية المتاحة فعلياً فقط لضمان عدم حدوث خطأ 404 والشاشة البيضاء
 const INITIAL_ASSETS = [
     './',
     './index.html',
-    './manifest.json',
-    './images/logo.png',
-    './css/main.css',
-    './css/layout.css',
-    './css/components.css',
-    './css/theme.css',
-    './js/config.js',
-    './js/storage.js',
-    './js/helpers.js',
-    './js/ui.js',
-    './js/app.js',
-    './js/years.js',
-    './js/halls.js',
-    './js/groups.js'
+    './manifest.json'
 ];
 
-self.addEventListener('install', (event) => { //[cite: 2]
+self.addEventListener('install', (event) => {[cite: 2]
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(INITIAL_ASSETS))
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(INITIAL_ASSETS);
+        })
     );
+    // تفعيل التحديث الجديد فوراً في الخلفية بدون انتظار إغلاق التطبيق
     self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => { //[cite: 2]
+self.addEventListener('activate', (event) => {[cite: 2]
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    if (key !== CACHE_NAME) return caches.delete(key);
+                    // حذف أي كاش قديم تلقائياً
+                    if (key !== CACHE_NAME) {
+                        return caches.delete(key);
+                    }
                 })
             );
         })
@@ -40,30 +33,25 @@ self.addEventListener('activate', (event) => { //[cite: 2]
     self.clients.claim();
 });
 
-// استراتيجية Cache First مع حفظ أي ملف يُطلب تلقائياً[cite: 2]
+// استراتيجية ذكية لجلب الملفات وتحديث الكاش تلقائياً دون تعطيل التطبيق[cite: 2]
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-                    }
-                }).catch(() => {});
-                return cachedResponse;
-            }
-
-            return fetch(event.request).then((networkResponse) => {
+            const fetchPromise = fetch(event.request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {
                     const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
                 }
                 return networkResponse;
             }).catch(() => {
-                // في حالة الأوفلاين التام
+                // في حالة انقطاع الإنترنت التام، يفتح من الكاش بسلاسة
             });
+
+            return cachedResponse || fetchPromise;
         })
     );
 });
