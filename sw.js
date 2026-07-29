@@ -1,16 +1,19 @@
-const CACHE_NAME = 'apex-v2';
+const CACHE_NAME = 'apex-v3';
 
-// الملفات الأساسية للتخزين السريع
+// الملفات الأساسية للتخزين السريع (مسارات مباشرة بدون كلمة assets)
 const INITIAL_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './assets/css/style.css',
-  './assets/js/config.js',
-  './assets/js/storage.js',
-  './assets/js/helpers.js',
-  './assets/js/ui.js',
-  './assets/js/app.js'
+  './css/main.css',
+  './css/layout.css',
+  './css/components.css',
+  './css/theme.css',
+  './js/config.js',
+  './js/storage.js',
+  './js/helpers.js',
+  './js/ui.js',
+  './js/app.js'
 ];
 
 self.addEventListener('install', (event) => {

@@ -3,171 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Academy - نظام إدارة الأكاديمية</title>
+    <title>Apex Academy - نظام إدارة الأكاديمية الذكي</title>
 
-    <!-- PWA Manifest & Theme Color -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome Icons (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
-                    colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#1e1b4b'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Alpine.js (CDN) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-
-    <!-- Alpine.js -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <!-- App Stylesheet -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Local CSS Files -->
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/theme.css">
 </head>
-<body class="font-cairo bg-slate-100 text-slate-800 antialiased min-h-screen flex" x-data="mainApp()" x-init="initApp()">
+<body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen">
 
-    <!-- القائمة الجانبية (Sidebar) -->
-    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 min-h-screen fixed right-0 top-0 bottom-0 z-40 no-print">
-        <div class="space-y-6">
-            <!-- شعار النظام -->
-            <div class="flex items-center space-x-reverse space-x-3 px-2 py-3 border-b border-slate-800">
-                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-brand-600/30">
-                    A
-                </div>
+    <!-- 🔒 1. شاشة القفل ودخول كلمة السر المتغيرة -->
+    <div id="password-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-slate-100">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Apex Academy</h2>
+            <p class="text-slate-500 text-sm mb-6">يرجى إدخال كلمة السر الخاصة بالفترة الحالية للمتابعة</p>
+
+            <form onsubmit="handlePasswordSubmit(event)" class="space-y-4">
                 <div>
-                    <h1 class="font-black text-white text-base leading-tight">Apex Academy</h1>
-                    <span class="text-[10px] text-slate-400 font-semibold">نظام الإدارة الذكي</span>
+                    <input type="password" 
+                           id="app-password-input" 
+                           placeholder="أدخل كلمة السر" 
+                           class="w-full px-5 py-3.5 text-center text-lg tracking-widest bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                           required>
+                </div>
+
+                <div id="password-error-msg" class="hidden text-red-500 text-xs font-semibold bg-red-50 py-2 rounded-xl">
+                    <i class="fa-solid fa-triangle-exclamation ml-1"></i> كلمة السر غير صحيحة!
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition duration-200 active:scale-95">
+                    دخول النظام
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 📱 2. واجهة التطبيق الرئيسية (تظهر بعد إدخال كلمة السر) -->
+    <div id="app-main-content" class="hidden min-h-screen flex flex-col md:flex-row">
+
+        <!-- القائمة الجانبية (Sidebar) -->
+        <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col">
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        A
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-lg leading-tight">Apex Academy</h1>
+                        <span class="text-xs text-indigo-400">الإدارة الذكية</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- عناصر التصفح والموديولات -->
-            <nav class="space-y-1">
-                <button @click="loadModule('dashboard')" :class="activeModule === 'dashboard' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-chart-pie w-5"></i>
+            <!-- أزرار الأقسام (Navigation Menu) -->
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button onclick="loadModule('dashboard')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-chart-pie w-6"></i>
                     <span>الرئيسية</span>
                 </button>
 
-                <button @click="loadModule('students')" :class="activeModule === 'students' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-user-graduate w-5"></i>
+                <button onclick="loadModule('students')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-user-graduate w-6"></i>
                     <span>الطلاب</span>
                 </button>
 
-                <button @click="loadModule('teachers')" :class="activeModule === 'teachers' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-chalkboard-user w-5"></i>
-                    <span>المعلمون</span>
+                <button onclick="loadModule('teachers')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-chalkboard-user w-6"></i>
+                    <span>المعلمين</span>
                 </button>
 
-                <button @click="loadModule('attendance')" :class="activeModule === 'attendance' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-clipboard-user w-5"></i>
+                <button onclick="loadModule('finance')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-wallet w-6"></i>
+                    <span>المالية</span>
+                </button>
+
+                <button onclick="loadModule('attendance')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-clipboard-user w-6"></i>
                     <span>الحضور والغياب</span>
                 </button>
 
-                <button @click="loadModule('subscriptions')" :class="activeModule === 'subscriptions' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-file-invoice-dollar w-5"></i>
+                <button onclick="loadModule('subscriptions')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-id-card w-6"></i>
                     <span>الاشتراكات</span>
                 </button>
 
-                <button @click="loadModule('finance')" :class="activeModule === 'finance' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-wallet w-5"></i>
-                    <span>المالية والأرباح</span>
+                <button onclick="loadModule('cards')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-credit-card w-6"></i>
+                    <span>الكروت</span>
                 </button>
 
-                <button @click="loadModule('cards')" :class="activeModule === 'cards' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-id-card w-5"></i>
-                    <span>طباعة الكروت</span>
+                <button onclick="loadModule('qr')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-qrcode w-6"></i>
+                    <span>ماسح QR</span>
                 </button>
 
-                <button @click="loadModule('qr')" :class="activeModule === 'qr' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-qrcode w-5"></i>
-                    <span>ماسح QR Code</span>
-                </button>
-
-                <button @click="loadModule('settings')" :class="activeModule === 'settings' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-gear w-5"></i>
+                <button onclick="loadModule('settings')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-gear w-6"></i>
                     <span>الإعدادات</span>
                 </button>
 
-                <button @click="loadModule('backup')" :class="activeModule === 'backup' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                    <i class="fa-solid fa-database w-5"></i>
+                <button onclick="loadModule('backup')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
+                    <i class="fa-solid fa-database w-6"></i>
                     <span>النسخ الاحتياطي</span>
                 </button>
             </nav>
-        </div>
 
-        <!-- أسفل القائمة الجانبية -->
-        <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-            تطبيق PWA v1.0.0
-        </div>
-    </aside>
-
-    <!-- المساحة الرئيسية للمحتوى (Main Content Area) -->
-    <main class="flex-1 mr-64 p-8 min-h-screen">
-        <!-- الهيدر العلوي -->
-        <header class="flex justify-between items-center mb-8 pb-4 border-b border-slate-200 no-print">
-            <div>
-                <h2 class="text-2xl font-black text-slate-800" x-text="moduleTitles[activeModule] || 'Apex Academy'"></h2>
-                <p class="text-xs text-slate-400 mt-1">نظام إدارة وتنظيم بيانات الأكاديمية</p>
+            <div class="p-4 border-t border-slate-800">
+                <button onclick="lockApp()" class="w-full flex items-center justify-center space-x-2 space-x-reverse px-4 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl transition text-sm">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>قفل التطبيق</span>
+                </button>
             </div>
-            <div class="flex items-center space-x-reverse space-x-3">
-                <div id="connection-status" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>جاهز للأوفلاين</span>
-                </div>
+        </aside>
+
+        <!-- منطقة المحتوى الرئيسية (يتم تحميل الأقسام بداخلها) -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            <div id="module-container">
+                <!-- سيتم جلب محتوى الأقسام هنا بواسطة app.js -->
             </div>
-        </header>
+        </main>
+    </div>
 
-        <!-- حاوية عرض الموديولات الديناميكية -->
-        <div id="module-container">
-            <!-- يتم تحميل صفحات الأقسام هنا عبر الـ Module Loader -->
-        </div>
-    </main>
-
-    <!-- حاوية الإشعارات (Toast Notifications) -->
-    <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 no-print"></div>
-
-    <!-- ملفات JS التأسيسية -->
-    <script src="assets/js/config.js"></script>
-    <script src="assets/js/storage.js"></script>
-    <script src="assets/js/helpers.js"></script>
-    <script src="assets/js/ui.js"></script>
-    <script src="assets/js/app.js"></script>
-
-    <!-- تسجيل Service Worker ليدعم الأوفلاين والتحديثات عبر GitHub -->
+    <!-- ⚙️ 3. برمجة كلمة السر المتغيرة وشروط الفتح -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then((reg) => {
-                        console.log('Service Worker Registered Successfully:', reg.scope);
-                    })
-                    .catch((err) => {
-                        console.error('Service Worker Registration Failed:', err);
-                    });
-            });
+        // حساب كلمة السر المتغيرة حسب المعادلة المطلوبة
+        function getDynamicPassword() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1; // الأشهر من 1 إلى 12
+
+            // إذا كان الشهر من 1 إلى 5: الناتج = 1 * السنة الحالية
+            // إذا كان الشهر من 6 إلى 12: الناتج = 6 * السنة الحالية
+            if (month >= 1 && month <= 5) {
+                return (1 * year).toString();
+            } else {
+                return (6 * year).toString();
+            }
         }
+
+        // التحقق من الإدخال عند الضغط على زر الدخول
+        function handlePasswordSubmit(event) {
+            event.preventDefault();
+            const inputField = document.getElementById('app-password-input');
+            const errorMsg = document.getElementById('password-error-msg');
+            const correctPass = getDynamicPassword();
+
+            if (inputField.value.trim() === correctPass) {
+                // حفظ حالة الدخول في الجلسة الحالية
+                sessionStorage.setItem('apex_auth', 'true');
+                unlockApp();
+            } else {
+                errorMsg.classList.remove('hidden');
+                inputField.value = '';
+                inputField.focus();
+            }
+        }
+
+        // فتح التطبيق وتأكيد الصلاحية
+        function unlockApp() {
+            document.getElementById('password-overlay').classList.add('hidden');
+            document.getElementById('app-main-content').classList.remove('hidden');
+            
+            // تحميل قسم Dashboard تلقائياً عند الدخول أول مرة
+            if (window.loadModule) {
+                window.loadModule('dashboard');
+            }
+        }
+
+        // قفل التطبيق عند الضغط على زر الخروج
+        function lockApp() {
+            sessionStorage.removeItem('apex_auth');
+            document.getElementById('password-overlay').classList.remove('hidden');
+            document.getElementById('app-main-content').classList.add('hidden');
+            document.getElementById('app-password-input').value = '';
+        }
+
+        // الفحص التلقائي عند فتح التطبيق
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('apex_auth') === 'true') {
+                unlockApp();
+            }
+        });
     </script>
+
+    <!-- 📦 4. استدعاء ملفات الجافاسكريبت الخارجية بالترتيب الصحيح -->
+    <script src="./js/config.js"></script>
+    <script src="./js/storage.js"></script>
+    <script src="./js/helpers.js"></script>
+    <script src="./js/ui.js"></script>
+    <script src="./js/app.js"></script>
 </body>
 </html>
