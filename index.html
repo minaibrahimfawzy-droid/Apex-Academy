@@ -12,6 +12,8 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Google Fonts (Cairo) -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Html5-Qrcode Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; }
     </style>
@@ -24,7 +26,6 @@
         <aside class="w-full lg:w-72 bg-white border-l border-slate-200/80 flex flex-col shadow-sm">
             <!-- الهيدر واللوجو -->
             <div class="flex items-center space-x-reverse space-x-3 p-5 border-b border-slate-100">
-                <!-- صورة اللوجو مع بديل تلقائي في حال عدم وجود الملف -->
                 <div class="relative w-12 h-12 flex-shrink-0">
                     <img src="images/logo.png" alt="شعار السنتر" class="w-12 h-12 object-contain rounded-2xl bg-indigo-50 p-1 shadow-sm" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white items-center justify-center font-bold text-lg shadow-sm absolute inset-0" style="display: none;">
@@ -245,11 +246,13 @@
                     </div>
                 </div>
 
-                <!-- تسجيل طالب -->
+                <!-- تسجيل طالب جديد (مع إنشاء الباركود التلقائي) -->
                 <div x-show="currentTab === 'register_student'" x-data="registerStudentModule()" x-init="initData()">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-4xl mx-auto">
-                        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">تسجيل طالب جديد</h3>
-                        <form @submit.prevent="saveStudent" class="space-y-4">
+                        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">تسجيل طالب جديد وإنشاء كود وباركود خاص</h3>
+                        
+                        <!-- نموذج الإدخال -->
+                        <form @submit.prevent="saveStudent" class="space-y-4" x-show="!lastStudent">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم الطالب رباعي <span class="text-rose-500">*</span></label>
@@ -280,11 +283,39 @@
                             </div>
                             <div class="pt-2">
                                 <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20 flex items-center space-x-reverse space-x-2">
-                                    <i class="fa-solid fa-lock"></i>
-                                    <span>حفظ وتسجيل الطالب</span>
+                                    <i class="fa-solid fa-qrcode"></i>
+                                    <span>حفظ وتسجيل الطالب وإنشاء الباركود</span>
                                 </button>
                             </div>
                         </form>
+
+                        <!-- كارت عرض بيانات الطالب والباركود بعد التسجيل -->
+                        <div x-show="lastStudent" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-4">
+                            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-1">
+                                <i class="fa-solid fa-check text-xl"></i>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-base">تم تسجيل الطالب بنجاح!</h4>
+                            
+                            <div class="bg-white p-6 rounded-2xl border border-slate-200 max-w-sm mx-auto space-y-3 shadow-sm">
+                                <p class="text-xs text-slate-400 font-mono">كود الطالب التعريفي</p>
+                                <p class="text-lg font-mono font-bold text-indigo-600 tracking-wider" x-text="lastStudent?.code"></p>
+                                
+                                <p class="text-base font-bold text-slate-800" x-text="lastStudent?.name"></p>
+                                <p class="text-xs text-slate-500" x-text="lastStudent?.year + ' - ' + lastStudent?.group"></p>
+                                
+                                <!-- توليد QR Code للطالب تلقائياً -->
+                                <div class="pt-2">
+                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + (lastStudent?.code || '')" alt="Student Barcode" class="mx-auto rounded-xl border p-2 bg-white shadow-inner">
+                                </div>
+                                
+                                <p class="text-[11px] text-slate-400">يمكنك تصوير هذا الباركود بكاميرا الموبايل لتسجيل الحضور فوراً</p>
+                            </div>
+
+                            <div class="pt-2">
+                                <button @click="lastStudent = null" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">تسجيل طالب آخر</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -340,21 +371,23 @@
                     </div>
                 </div>
 
-                <!-- سجل الحضور -->
+                <!-- سجل الحضور (كاميرا حقيقية + إدخال يدوي) -->
                 <div x-show="currentTab === 'attendance'" x-data="attendanceModule()">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-2xl mx-auto">
-                        <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالباركود</h3>
+                        <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالباركود أو اليدوي</h3>
+                        
+                        <!-- الإدخال اليدوي -->
                         <div class="flex space-x-reverse space-x-2">
                             <input type="text" x-model="studentCode" @keyup.enter="recordAttendance()" placeholder="أدخل كود الطالب يدوياً..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-600">
                             <button @click="recordAttendance()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">تسجيل</button>
                         </div>
-                        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-4">
-                            <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl mx-auto flex items-center justify-center text-2xl">
-                                <i class="fa-solid fa-qrcode"></i>
-                            </div>
-                            <button @click="alert('جاري تشغيل الكاميرا...')" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center space-x-reverse space-x-2 mx-auto">
+
+                        <!-- تشغيل الكاميرا الحقيقية -->
+                        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center space-y-4">
+                            <div id="reader" class="w-full max-w-sm mx-auto overflow-hidden rounded-xl"></div>
+                            <button @click="toggleScanner()" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center space-x-reverse space-x-2 mx-auto">
                                 <i class="fa-solid fa-camera"></i>
-                                <span>تشغيل الكاميرا للمسح</span>
+                                <span x-text="scanning ? 'إيقاف الكاميرا' : 'تشغيل الكاميرا للمسح'"></span>
                             </button>
                         </div>
                     </div>
@@ -530,6 +563,7 @@
         function registerStudentModule() {
             return {
                 years: [], groups: [], filteredGroups: [],
+                lastStudent: null,
                 formData: { name: '', year: '', group: '', phone: '', parentPhone: '' },
                 initData() {
                     this.years = JSON.parse(localStorage.getItem('apex_years')) || [];
@@ -542,10 +576,14 @@
                 saveStudent() {
                     if (!this.formData.name || !this.formData.year || !this.formData.group) return;
                     let students = JSON.parse(localStorage.getItem('apex_students')) || [];
-                    const newStudent = { id: Date.now(), code: 'ST-' + Math.floor(1000 + Math.random() * 9000), ...this.formData };
+                    const newStudent = { 
+                        id: Date.now(), 
+                        code: 'ST-' + Math.floor(1000 + Math.random() * 9000), 
+                        ...this.formData 
+                    };
                     students.push(newStudent);
                     localStorage.setItem('apex_students', JSON.stringify(students));
-                    alert('تم تسجيل الطالب بنجاح! كود الطالب: ' + newStudent.code);
+                    this.lastStudent = newStudent;
                     this.formData = { name: '', year: '', group: '', phone: '', parentPhone: '' };
                 }
             }
@@ -579,16 +617,59 @@
         function attendanceModule() {
             return {
                 studentCode: '',
+                scanner: null,
+                scanning: false,
                 recordAttendance() {
                     if (!this.studentCode.trim()) return;
                     let students = JSON.parse(localStorage.getItem('apex_students')) || [];
-                    let student = students.find(s => s.code === this.studentCode || s.name.includes(this.studentCode));
+                    let student = students.find(s => s.code === this.studentCode.trim() || s.name.includes(this.studentCode.trim()));
                     if (student) {
                         alert('تم تسجيل حضور الطالب: ' + student.name);
                     } else {
                         alert('الطالب غير موجود!');
                     }
                     this.studentCode = '';
+                    if (this.scanning) {
+                        this.stopScanner();
+                    }
+                },
+                toggleScanner() {
+                    if (this.scanning) {
+                        this.stopScanner();
+                    } else {
+                        this.startScanner();
+                    }
+                },
+                startScanner() {
+                    this.scanning = true;
+                    setTimeout(() => {
+                        const html5QrCode = new Html5Qrcode("reader");
+                        this.scanner = html5QrCode;
+                        html5QrCode.start(
+                            { facingMode: "environment" },
+                            { fps: 10, qrbox: { width: 250, height: 250 } },
+                            (decodedText, decodedResult) => {
+                                this.studentCode = decodedText;
+                                this.recordAttendance();
+                            },
+                            (errorMessage) => {}
+                        ).catch((err) => {
+                            alert("تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.");
+                            this.scanning = false;
+                        });
+                    }, 100);
+                },
+                stopScanner() {
+                    if (this.scanner) {
+                        this.scanner.stop().then(() => {
+                            this.scanner.clear();
+                            this.scanning = false;
+                        }).catch(err => {
+                            this.scanning = false;
+                        });
+                    } else {
+                        this.scanning = false;
+                    }
                 }
             }
         }
