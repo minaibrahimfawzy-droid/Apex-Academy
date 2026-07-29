@@ -5,7 +5,6 @@
 
 // دالة تحميل الأقسام (الموديولات)
 async function loadModule(moduleName) {
-    // العثور على العنصر المستهدف لاراض الأقسام
     const container = document.getElementById('module-container') || 
                       document.getElementById('content') || 
                       document.getElementById('app');
@@ -17,9 +16,15 @@ async function loadModule(moduleName) {
 
     if (!moduleName) return;
 
-    // تنظيف اسم الموديول وتحويله لحروف صغيرة لمنع مشاكل الحروف الكبيرة والصغيرة على GitHub
+    // تنظيف اسم الموديول وتحويله لحروف صغيرة
     const cleanModuleName = moduleName.toLowerCase().trim();
-    const targetUrl = `./modules/${cleanModuleName}.html`;
+
+    // قائمة بالمسارات المحتملة للقسم لمراعاة تركيبة المجلدات المختلفة
+    const possibleUrls = [
+        `./modules/${cleanModuleName}/${cleanModuleName}.html`,
+        `./modules/${cleanModuleName}/index.html`,
+        `./modules/${cleanModuleName}.html`
+    ];
 
     // 1. إظهار مؤشر التحميل
     container.innerHTML = `
@@ -31,29 +36,39 @@ async function loadModule(moduleName) {
         </div>
     `;
 
-    try {
-        // 2. طلب ملف القسم من السيرفر
-        const response = await fetch(targetUrl);
+    let htmlContent = null;
+    let successfulUrl = '';
+    let lastError = null;
 
-        if (!response.ok) {
-            throw new Error(`تعذر فتح الملف (رمز الخطأ: ${response.status} ${response.statusText}).\nتأكد من وجود الملف باسم "${cleanModuleName}.html" بحروف صغيرة داخل مجلد modules على GitHub.`);
+    // 2. تجربة المسارات المحتملة واحداً تلو الآخر حتى العثور على الملف
+    for (const url of possibleUrls) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                htmlContent = await response.text();
+                successfulUrl = url;
+                break; // تم العثور على الملف بنجاح
+            }
+        } catch (err) {
+            lastError = err;
         }
+    }
 
-        const html = await response.text();
-        container.innerHTML = html;
+    // 3. معالجة وتثبيت المحتوى
+    if (htmlContent !== null) {
+        container.innerHTML = htmlContent;
 
-        // 3. إعادة تفعيل مكتبة Alpine.js إذا كانت مستخدمة في المشهد
+        // إعادة تفعيل مكتبة Alpine.js للتفاعل والمكونات إن وجد
         if (window.Alpine) {
             window.Alpine.initTree(container);
         }
 
-        // التمرير لأعلى الصفحة عند الانتقال لقسم جديد
+        // التمرير لأعلى الصفحة تلقائياً
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        console.error('Module load error:', lastError);
 
-    } catch (error) {
-        console.error('Module load error:', error);
-
-        // 4. عرض رسالة خطأ تفصيلية على الشاشة لمعرفة السبب بدقة
+        // 4. عرض كارت خطأ تفصيلي موضح فيه المسارات المرفوضة في حال عدم العثور على الملف
         container.innerHTML = `
             <div class="p-6 m-4 bg-red-50 border border-red-300 rounded-2xl shadow-sm text-right dir-rtl max-w-2xl mx-auto">
                 <div class="flex items-center space-x-3 space-x-reverse text-red-600 mb-2">
@@ -62,24 +77,27 @@ async function loadModule(moduleName) {
                     </svg>
                     <h3 class="font-bold text-lg">تعذر تحميل القسم (${cleanModuleName})</h3>
                 </div>
-                <p class="text-red-700 text-sm whitespace-pre-line leading-relaxed mb-4">${error.message}</p>
+                <p class="text-red-700 text-sm leading-relaxed mb-4">
+                    لم يتم العثور على ملف هذا القسم في المجلدات المرفوعة. تأكد من أسماء الملفات داخل مجلدات الأقسام على GitHub.
+                </p>
                 <div class="bg-white p-3 rounded-lg border border-red-200 text-xs font-mono text-gray-700 dir-ltr text-left overflow-x-auto">
-                    Target Path: ${targetUrl}
+                    Searched Paths:<br>
+                    ${possibleUrls.map(u => `- ${u}`).join('<br>')}
                 </div>
             </div>
         `;
     }
 }
 
-// ربط الدالة بـ window لتكون متاحة لجميع أزرار الـ HTML (onclick="loadModule('...')")
+// ربط الدالة بـ window لتكون متاحة لجميع الأزرار (onclick="loadModule('students')")
 window.loadModule = loadModule;
 
-// تشغيل الكود تلقائياً عند فتح الصفحة
+// تشغيل القسم الرئيسي الافتراضي عند فتح التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Apex Academy app loaded successfully.');
 
-    // يمكنك تغيير 'home' إلى اسم القسم الأول الرئيسي لديك (مثل: home أو dashboard أو students)
-    const defaultModule = 'home';
+    // يمكنك تغيير 'dashboard' إلى اسم القسم الأول لديك (مثل: dashboard أو home أو students)
+    const defaultModule = 'dashboard';
     
     const container = document.getElementById('module-container') || 
                       document.getElementById('content') || 
