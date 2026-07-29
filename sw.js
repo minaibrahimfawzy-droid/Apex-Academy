@@ -1,10 +1,11 @@
-const CACHE_NAME = 'apex-v5';
+const CACHE_NAME = 'apex-v6';
 
-// الملفات الأساسية للتخزين السريع (محدثة لتشمل الموديولات الجديدة)
+// الملفات الأساسية للتخزين السريع (محدثة لتشمل الموديولات الجديدة واللوجو)
 const INITIAL_ASSETS = [
     './',
     './index.html',
     './manifest.json',
+    './images/logo.png',
     './css/main.css',
     './css/layout.css',
     './css/components.css',
@@ -66,3 +67,4 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+```[cite: 1]
