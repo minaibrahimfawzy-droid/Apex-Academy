@@ -12,6 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- مكتبة تصدير PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- مكتبة مسح الباركود بالكاميرا -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <!-- مكتبة Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -33,7 +35,7 @@
                 passwordError: false,
                 
                 // متغيرات نظام التحديثات من GitHub
-                currentVersion: '1.0.0',
+                currentVersion: '1.0.2',
                 hasUpdate: false,
                 remoteVersion: '',
 
@@ -75,6 +77,55 @@
                 teachers: JSON.parse(localStorage.getItem('apex_teachers')) || [],
                 cardTemplate: localStorage.getItem('apex_card_template') || '',
                 currentTab: 'home',
+
+                // تصدير النسخة الاحتياطية
+                exportData() {
+                    const backupData = {
+                        years: this.years,
+                        halls: this.halls,
+                        groups: this.groups,
+                        students: this.students,
+                        attendance: this.attendance,
+                        payments: this.payments,
+                        teachers: this.teachers,
+                        cardTemplate: this.cardTemplate,
+                        exportDate: new Date().toLocaleString('ar-EG')
+                    };
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", "Apex_Academy_Backup_" + new Date().toISOString().slice(0,10) + ".json");
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                },
+
+                // استيراد النسخة الاحتياطية
+                importData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.years) this.years = data.years;
+                            if (data.halls) this.halls = data.halls;
+                            if (data.groups) this.groups = data.groups;
+                            if (data.students) this.students = data.students;
+                            if (data.attendance) this.attendance = data.attendance;
+                            if (data.payments) this.payments = data.payments;
+                            if (data.teachers) this.teachers = data.teachers;
+                            if (data.cardTemplate) this.cardTemplate = data.cardTemplate;
+                            
+                            this.syncStorage();
+                            alert('تم استعادة البيانات بنجاح وإشعار النظام!');
+                            window.location.reload();
+                        } catch (err) {
+                            alert('فشل قراءة الملف، تأكد من أنه ملف نسخ احتياطي صحيح وصالح.');
+                        }
+                    };
+                    reader.readAsText(file);
+                },
 
                 // السنوات
                 editingYear: null,
@@ -298,21 +349,22 @@
                     </span>
                 </template>
             </div>
-            <div class="text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">التحديث المباشر مفعل</div>
+            <div class="text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">التحديث المباشر مفعل (الإصدار 1.0.2)</div>
         </header>
 
         <!-- التبويبات العلوية -->
-        <nav class="bg-white border-b border-slate-200 px-4 py-3 flex overflow-x-auto space-x-reverse space-x-3 text-sm font-bold text-slate-700 shadow-sm">
-            <button @click="$store.apex.currentTab = 'home'" :class="$store.apex.currentTab === 'home' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-house"></i> الرئيسية</button>
-            <button @click="$store.apex.currentTab = 'students'" :class="$store.apex.currentTab === 'students' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-users"></i> الطلاب</button>
-            <button @click="$store.apex.currentTab = 'register'" :class="$store.apex.currentTab === 'register' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-user-plus"></i> تسجيل طالب</button>
-            <button @click="$store.apex.currentTab = 'attendance'" :class="$store.apex.currentTab === 'attendance' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-qrcode"></i> الحضور والكاميرا</button>
-            <button @click="$store.apex.currentTab = 'groups'" :class="$store.apex.currentTab === 'groups' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> المجموعات</button>
-            <button @click="$store.apex.currentTab = 'accounts'" :class="$store.apex.currentTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-wallet"></i> التحصيل والرسوم</button>
-            <button @click="$store.apex.currentTab = 'teachers'" :class="$store.apex.currentTab === 'teachers' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-chalkboard-user"></i> المعلمين</button>
-            <button @click="$store.apex.currentTab = 'halls'" :class="$store.apex.currentTab === 'halls' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-door-open"></i> القاعات</button>
-            <button @click="$store.apex.currentTab = 'years'" :class="$store.apex.currentTab === 'years' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> السنوات</button>
-            <button @click="$store.apex.currentTab = 'cards'" :class="$store.apex.currentTab === 'cards' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-600'" class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-2"><i class="fa-solid fa-id-card"></i> الكارنيهات</button>
+        <nav class="bg-white border-b border-slate-200 px-4 py-3.5 flex overflow-x-auto space-x-reverse space-x-3 text-sm font-bold text-slate-700 shadow-sm">
+            <button @click="$store.apex.currentTab = 'home'" :class="$store.apex.currentTab === 'home' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-house text-base"></i> الرئيسية</button>
+            <button @click="$store.apex.currentTab = 'students'" :class="$store.apex.currentTab === 'students' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-users text-base"></i> الطلاب</button>
+            <button @click="$store.apex.currentTab = 'register'" :class="$store.apex.currentTab === 'register' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-user-plus text-base"></i> تسجيل طالب</button>
+            <button @click="$store.apex.currentTab = 'attendance'" :class="$store.apex.currentTab === 'attendance' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-qrcode text-base"></i> الحضور والكاميرا</button>
+            <button @click="$store.apex.currentTab = 'groups'" :class="$store.apex.currentTab === 'groups' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-layer-group text-base"></i> المجموعات</button>
+            <button @click="$store.apex.currentTab = 'accounts'" :class="$store.apex.currentTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-wallet text-base"></i> التحصيل والرسوم</button>
+            <button @click="$store.apex.currentTab = 'teachers'" :class="$store.apex.currentTab === 'teachers' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-chalkboard-user text-base"></i> المعلمين</button>
+            <button @click="$store.apex.currentTab = 'halls'" :class="$store.apex.currentTab === 'halls' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-door-open text-base"></i> القاعات</button>
+            <button @click="$store.apex.currentTab = 'years'" :class="$store.apex.currentTab === 'years' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-calendar-days text-base"></i> السنوات</button>
+            <button @click="$store.apex.currentTab = 'cards'" :class="$store.apex.currentTab === 'cards' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-id-card text-base"></i> الكارنيهات</button>
+            <button @click="$store.apex.currentTab = 'backup'" :class="$store.apex.currentTab === 'backup' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-100 text-slate-700'" class="px-4.5 py-3 rounded-xl transition-all whitespace-nowrap flex items-center gap-2.5 text-sm font-extrabold"><i class="fa-solid fa-database text-base"></i> النسخ الاحتياطي</button>
         </nav>
 
         <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
@@ -420,12 +472,44 @@
             </div>
 
             <!-- 4. الحضور والكاميرا -->
-            <div x-show="$store.apex.currentTab === 'attendance'" x-data="{ codeInput: '', scanResult: null }" class="space-y-6" x-cloak>
+            <div x-show="$store.apex.currentTab === 'attendance'" x-data="{ 
+                codeInput: '', 
+                scanResult: null, 
+                scanner: null,
+                isScanning: false,
+                startCameraScanner() {
+                    this.isScanning = true;
+                    setTimeout(() => {
+                        if (!this.scanner) {
+                            this.scanner = new Html5QrcodeScanner('reader', { fps: 10, qrbox: 250 });
+                        }
+                        this.scanner.render((decodedText) => {
+                            this.scanResult = Alpine.store('apex').recordAttendanceByCode(decodedText);
+                            this.stopCameraScanner();
+                        }, (error) => {});
+                    }, 200);
+                },
+                stopCameraScanner() {
+                    if (this.scanner) {
+                        this.scanner.clear().catch(error => console.error(error));
+                        this.scanner = null;
+                    }
+                    this.isScanning = false;
+                }
+            }" class="space-y-6" x-cloak>
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-4 text-center">
-                    <h3 class="font-bold text-lg text-slate-800">تسجيل حضور الطلاب</h3>
-                    <form @submit.prevent="scanResult = $store.apex.recordAttendanceByCode(codeInput); codeInput='';" class="space-y-3">
-                        <input type="text" x-model="codeInput" placeholder="أدخل أو امسح كود الطالب..." autofocus class="w-full px-4 py-3 text-center border rounded-xl text-base font-mono focus:outline-none focus:border-indigo-600">
-                        <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-sm shadow-md hover:bg-emerald-700 transition-all">تسجيل الحضور</button>
+                    <h3 class="font-bold text-lg text-slate-800">تسجيل حضور الطلاب (بالكود أو الكاميرا)</h3>
+                    
+                    <div class="flex gap-2 justify-center">
+                        <button type="button" @click="startCameraScanner()" x-show="!isScanning" class="px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2"><i class="fa-solid fa-camera"></i> تشغيل الكاميرا للباركود</button>
+                        <button type="button" @click="stopCameraScanner()" x-show="isScanning" class="px-4 py-2.5 bg-rose-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-rose-700 transition-all flex items-center gap-2"><i class="fa-solid fa-stop"></i> إيقاف الكاميرا</button>
+                    </div>
+
+                    <div id="reader" class="w-full overflow-hidden rounded-xl"></div>
+
+                    <form @submit.prevent="scanResult = $store.apex.recordAttendanceByCode(codeInput); codeInput='';" class="space-y-3 pt-2 border-t">
+                        <input type="text" x-model="codeInput" placeholder="أدخل أو امسح كود الطالب يدويًا..." class="w-full px-4 py-3 text-center border rounded-xl text-base font-mono focus:outline-none focus:border-indigo-600">
+                        <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-sm shadow-md hover:bg-emerald-700 transition-all">تسجيل الحضور يدويًا</button>
                     </form>
 
                     <template x-if="scanResult">
@@ -536,6 +620,32 @@
                     <h3 class="font-bold text-lg text-slate-800">تصميم وطباعة كارنيهات الطلاب</h3>
                     <input type="file" @change="$store.apex.uploadCardTemplate($event)" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     <p class="text-xs text-slate-500">قم برفع تصميم الكارنيه الخاص بأكاديمية أبيكس لطباعته وتوليد الباركود للطلاب تلقائياً.</p>
+                </div>
+            </div>
+
+            <!-- 11. النسخ الاحتياطي والتصدير/الاستيراد -->
+            <div x-show="$store.apex.currentTab === 'backup'" class="space-y-6" x-cloak>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-6 text-center">
+                    <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-inner">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="font-bold text-lg text-slate-800">النسخ الاحتياطي واستعادة البيانات</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">قم بتصدير نسخة احتياطية من بياناتك لحفظها أو نقلها إلى هاتف آخر، أو استيراد ملف سابق لاستعادة البيانات بكل سهولة.</p>
+                    </div>
+                    
+                    <div class="space-y-4 pt-2 border-t">
+                        <!-- زر التصدير -->
+                        <button @click="$store.apex.exportData()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-arrow-down text-base"></i> تصدير وتحميل نسخة احتياطية
+                        </button>
+
+                        <!-- زر الاستيراد -->
+                        <div class="space-y-2 text-right">
+                            <label class="block text-xs font-bold text-slate-600">استيراد ملف نسخ احتياطي سابق:</label>
+                            <input type="file" @change="$store.apex.importData($event)" accept=".json" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border rounded-xl p-2 cursor-pointer">
+                        </div>
+                    </div>
                 </div>
             </div>
 
