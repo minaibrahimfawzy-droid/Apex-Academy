@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Alpine.js Store (المخزن المركزي المترابط لجميع الأقسام) -->
+    <!-- Alpine.js Store -->
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.store('apex', {
@@ -21,9 +21,15 @@
                 payments: JSON.parse(localStorage.getItem('apex_payments')) || [],
                 settings: JSON.parse(localStorage.getItem('apex_settings')) || { centerName: 'Apex Center', adminName: 'الإدارة العامة' },
 
-                saveYear(name, notes) {
-                    if (!name.trim()) return;
-                    this.years.push({ id: Date.now(), name, notes });
+                // السنوات
+                saveYear(data, id) {
+                    if (!data.name.trim()) return;
+                    if (id) {
+                        let index = this.years.findIndex(y => y.id === id);
+                        if (index !== -1) this.years[index] = { ...this.years[index], ...data };
+                    } else {
+                        this.years.push({ id: Date.now(), ...data });
+                    }
                     this.syncStorage();
                 },
                 deleteYear(id) {
@@ -33,9 +39,15 @@
                     }
                 },
 
-                saveHall(name, capacity) {
-                    if (!name.trim()) return;
-                    this.halls.push({ id: Date.now(), name, capacity });
+                // القاعات
+                saveHall(data, id) {
+                    if (!data.name.trim()) return;
+                    if (id) {
+                        let index = this.halls.findIndex(h => h.id === id);
+                        if (index !== -1) this.halls[index] = { ...this.halls[index], ...data };
+                    } else {
+                        this.halls.push({ id: Date.now(), ...data });
+                    }
                     this.syncStorage();
                 },
                 deleteHall(id) {
@@ -45,9 +57,15 @@
                     }
                 },
 
-                saveGroup(data) {
+                // المجموعات
+                saveGroup(data, id) {
                     if (!data.name.trim() || !data.year) return;
-                    this.groups.push({ id: Date.now(), ...data });
+                    if (id) {
+                        let index = this.groups.findIndex(g => g.id === id);
+                        if (index !== -1) this.groups[index] = { ...this.groups[index], ...data };
+                    } else {
+                        this.groups.push({ id: Date.now(), ...data });
+                    }
                     this.syncStorage();
                 },
                 deleteGroup(id) {
@@ -57,21 +75,34 @@
                     }
                 },
 
-                saveStudent(data) {
+                // الطلاب
+                saveStudent(data, id) {
                     if (!data.name || !data.year || !data.group) return;
                     let targetGroup = this.groups.find(g => g.name === data.group && g.year === data.year);
                     let groupPrice = targetGroup ? targetGroup.price : 0;
 
-                    const newStudent = { 
-                        id: Date.now(), 
-                        code: 'ST-' + Math.floor(1000 + Math.random() * 9000), 
-                        regDate: new Date().toLocaleDateString('ar-EG'),
-                        requiredAmount: groupPrice,
-                        ...data 
-                    };
-                    this.students.push(newStudent);
+                    if (id) {
+                        let index = this.students.findIndex(s => s.id === id);
+                        if (index !== -1) {
+                            this.students[index] = { 
+                                ...this.students[index], 
+                                ...data, 
+                                requiredAmount: groupPrice 
+                            };
+                        }
+                    } else {
+                        const newStudent = { 
+                            id: Date.now(), 
+                            code: 'ST-' + Math.floor(1000 + Math.random() * 9000), 
+                            regDate: new Date().toLocaleDateString('ar-EG'),
+                            requiredAmount: groupPrice,
+                            ...data 
+                        };
+                        this.students.push(newStudent);
+                        this.syncStorage();
+                        return newStudent;
+                    }
                     this.syncStorage();
-                    return newStudent;
                 },
                 deleteStudent(id) {
                     if (confirm('هل أنت متأكد من حذف الطالب؟')) {
@@ -129,7 +160,6 @@
         });
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; }
     </style>
@@ -185,6 +215,7 @@
 
             <div class="p-8 flex-1">
                 
+                <!-- لوحة التحكم -->
                 <div x-show="currentTab === 'dashboard'" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-2">
@@ -202,6 +233,7 @@
                     </div>
                 </div>
 
+                <!-- السنوات الدراسية -->
                 <div x-show="currentTab === 'years'" x-data="yearsModule()">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
@@ -220,8 +252,9 @@
                                             <tr class="hover:bg-slate-50/80 transition-all">
                                                 <td class="py-3 px-4 font-bold text-slate-800" x-text="item.name"></td>
                                                 <td class="py-3 px-4 text-slate-600" x-text="item.notes || '-'"></td>
-                                                <td class="py-3 px-4 text-center">
-                                                    <button @click="$store.apex.deleteYear(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="py-3 px-4 text-center space-x-reverse space-x-1">
+                                                    <button @click="editItem(item)" class="p-2 text-indigo-500 hover:text-indigo-700 rounded-lg" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                                    <button @click="$store.apex.deleteYear(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg" title="حذف"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             </tr>
                                         </template>
@@ -233,8 +266,8 @@
                             </div>
                         </div>
                         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 h-fit">
-                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إضافة سنة دراسية</h3>
-                            <form @submit.prevent="saveYear" class="space-y-4">
+                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3" x-text="editingId ? 'تعديل السنة الدراسية' : 'إضافة سنة دراسية'"></h3>
+                            <form @submit.prevent="submitForm" class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم السنة الدراسية *</label>
                                     <input type="text" x-model="formData.name" placeholder="مثال: الأول الثانوي" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
@@ -243,12 +276,16 @@
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">ملاحظات</label>
                                     <input type="text" x-model="formData.notes" placeholder="اختياري..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
                                 </div>
-                                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">حفظ السنة</button>
+                                <div class="flex space-x-reverse space-x-2">
+                                    <button type="submit" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md" x-text="editingId ? 'تحديث السنة' : 'حفظ السنة'"></button>
+                                    <button type="button" @click="resetForm()" x-show="editingId" class="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm">إلغاء</button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- القاعات -->
                 <div x-show="currentTab === 'halls'" x-data="hallsModule()">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
@@ -267,8 +304,9 @@
                                             <tr class="hover:bg-slate-50/80 transition-all">
                                                 <td class="py-3 px-4 font-bold text-slate-800" x-text="item.name"></td>
                                                 <td class="py-3 px-4 font-mono text-indigo-600" x-text="item.capacity + ' طالب'"></td>
-                                                <td class="py-3 px-4 text-center">
-                                                    <button @click="$store.apex.deleteHall(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="py-3 px-4 text-center space-x-reverse space-x-1">
+                                                    <button @click="editItem(item)" class="p-2 text-indigo-500 hover:text-indigo-700 rounded-lg" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                                    <button @click="$store.apex.deleteHall(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg" title="حذف"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             </tr>
                                         </template>
@@ -280,8 +318,8 @@
                             </div>
                         </div>
                         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 h-fit">
-                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إضافة قاعة</h3>
-                            <form @submit.prevent="saveHall" class="space-y-4">
+                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3" x-text="editingId ? 'تعديل القاعة' : 'إضافة قاعة'"></h3>
+                            <form @submit.prevent="submitForm" class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم القاعة *</label>
                                     <input type="text" x-model="formData.name" placeholder="مثال: قاعة 101" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
@@ -290,47 +328,60 @@
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">السعة الاستيعابية</label>
                                     <input type="number" x-model="formData.capacity" placeholder="25" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
                                 </div>
-                                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">حفظ القاعة</button>
+                                <div class="flex space-x-reverse space-x-2">
+                                    <button type="submit" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md" x-text="editingId ? 'تحديث القاعة' : 'حفظ القاعة'"></button>
+                                    <button type="button" @click="resetForm()" x-show="editingId" class="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm">إلغاء</button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- المجموعات (مع القاعة والأيام والتوقيت المنفصل) -->
                 <div x-show="currentTab === 'groups'" x-data="groupsModule()">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">المجموعات الدراسية وأسعار الاشتراكات</h3>
+                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">المجموعات الدراسية والمواعيد والقاعات</h3>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-right text-sm">
                                     <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                                         <tr>
-                                            <th class="py-3 px-4">المجموعة</th>
-                                            <th class="py-3 px-4">السنة</th>
+                                            <th class="py-3 px-4">المجموعة والسنة</th>
+                                            <th class="py-3 px-4">القاعة</th>
+                                            <th class="py-3 px-4">المواعيد (الأيام والتوقيت)</th>
                                             <th class="py-3 px-4">السعر</th>
-                                            <th class="py-3 px-4 text-center">إجراء</th>
+                                            <th class="py-3 px-4 text-center">إجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         <template x-for="item in $store.apex.groups" :key="item.id">
                                             <tr class="hover:bg-slate-50/80 transition-all">
-                                                <td class="py-3 px-4 font-bold text-slate-800" x-text="item.name"></td>
-                                                <td class="py-3 px-4 text-slate-600" x-text="item.year"></td>
+                                                <td class="py-3 px-4">
+                                                    <span class="font-bold text-slate-800 block" x-text="item.name"></span>
+                                                    <span class="text-xs text-slate-400" x-text="item.year"></span>
+                                                </td>
+                                                <td class="py-3 px-4 font-semibold text-indigo-600" x-text="item.hall || 'غير محددة'"></td>
+                                                <td class="py-3 px-4 text-xs text-slate-600">
+                                                    <span class="block font-bold text-slate-700" x-text="item.days"></span>
+                                                    <span class="font-mono text-emerald-600" x-text="item.time"></span>
+                                                </td>
                                                 <td class="py-3 px-4 font-mono font-bold text-emerald-600" x-text="item.price + ' ج.م'"></td>
-                                                <td class="py-3 px-4 text-center">
-                                                    <button @click="$store.apex.deleteGroup(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                                                <td class="py-3 px-4 text-center space-x-reverse space-x-1">
+                                                    <button @click="editItem(item)" class="p-2 text-indigo-500 hover:text-indigo-700 rounded-lg" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                                    <button @click="$store.apex.deleteGroup(item.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg" title="حذف"><i class="fa-solid fa-trash"></i></button>
                                                 </td>
                                             </tr>
                                         </template>
                                         <template x-if="$store.apex.groups.length === 0">
-                                            <tr><td colspan="4" class="py-12 text-center text-slate-400">لا توجد مجموعات مسجلة.</td></tr>
+                                            <tr><td colspan="5" class="py-12 text-center text-slate-400">لا توجد مجموعات مسجلة.</td></tr>
                                         </template>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 h-fit">
-                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إضافة مجموعة جديدة</h3>
-                            <form @submit.prevent="saveGroup" class="space-y-4">
+                            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3" x-text="editingId ? 'تعديل المجموعة' : 'إضافة مجموعة جديدة'"></h3>
+                            <form @submit.prevent="submitForm" class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المجموعة *</label>
                                     <input type="text" x-model="formData.name" placeholder="مجموعة أ" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
@@ -343,20 +394,53 @@
                                     </select>
                                 </div>
                                 <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">القاعة الدراسية *</label>
+                                    <select x-model="formData.hall" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                                        <option value="">اختر القاعة...</option>
+                                        <template x-for="h in $store.apex.halls"><option :value="h.name" x-text="h.name + ' (سعة: ' + h.capacity + ')'"></option></template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">أيام الأسبوع *</label>
+                                    <select x-model="formData.days" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                                        <option value="">اختر الأيام...</option>
+                                        <option value="السبت والاثنين والأربعاء">السبت والاثنين والأربعاء</option>
+                                        <option value="الأحد والثلاثاء والخميس">الأحد والثلاثاء والخميس</option>
+                                        <option value="الجمعة والسبت">الجمعة والسبت</option>
+                                        <option value="يوم الأحد والأربعاء">يوم الأحد والأربعاء</option>
+                                        <option value="يوم الاثنين والثلاثاء">يوم الاثنين والثلاثاء</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">التوقيت الساعي *</label>
+                                    <select x-model="formData.time" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                                        <option value="">اختر التوقيت...</option>
+                                        <option value="12:00 م - 02:00 م">12:00 م - 02:00 م</option>
+                                        <option value="02:00 م - 04:00 م">02:00 م - 04:00 م</option>
+                                        <option value="04:00 م - 06:00 م">04:00 م - 06:00 م</option>
+                                        <option value="06:00 م - 08:00 م">06:00 م - 08:00 م</option>
+                                        <option value="08:00 م - 10:00 م">08:00 م - 10:00 م</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">سعر اشتراك المجموعة (ج) *</label>
                                     <input type="number" x-model="formData.price" placeholder="200" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
                                 </div>
-                                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">حفظ المجموعة</button>
+                                <div class="flex space-x-reverse space-x-2">
+                                    <button type="submit" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md" x-text="editingId ? 'تحديث المجموعة' : 'حفظ المجموعة'"></button>
+                                    <button type="button" @click="resetForm()" x-show="editingId" class="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm">إلغاء</button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- تسجيل طالب جديد -->
                 <div x-show="currentTab === 'register_student'" x-data="registerStudentModule()">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-4xl mx-auto">
-                        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">تسجيل طالب جديد وإنشاء كود وباركود مدمج</h3>
+                        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3" x-text="editingId ? 'تعديل بيانات الطالب' : 'تسجيل طالب جديد وإنشاء كود وباركود مدمج'"></h3>
                         
-                        <form @submit.prevent="saveStudent" class="space-y-4" x-show="!lastStudent">
+                        <form @submit.prevent="submitForm" class="space-y-4" x-show="!lastStudent || editingId">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم الطالب رباعي *</label>
@@ -381,13 +465,16 @@
                                     <input type="text" x-model="formData.phone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
                                 </div>
                             </div>
-                            <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md flex items-center space-x-reverse space-x-2">
-                                <i class="fa-solid fa-qrcode"></i>
-                                <span>حفظ الطالب وتوليد الباركود</span>
-                            </button>
+                            <div class="flex space-x-reverse space-x-2">
+                                <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md flex items-center space-x-reverse space-x-2">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                    <span x-text="editingId ? 'تحديث البيانات' : 'حفظ الطالب وتوليد الباركود'"></span>
+                                </button>
+                                <button type="button" @click="resetForm()" x-show="editingId" class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm">إلغاء</button>
+                            </div>
                         </form>
 
-                        <div x-show="lastStudent" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-4">
+                        <div x-show="lastStudent && !editingId" class="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-4">
                             <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600">
                                 <i class="fa-solid fa-check text-xl"></i>
                             </div>
@@ -404,6 +491,7 @@
                     </div>
                 </div>
 
+                <!-- قائمة الطلاب -->
                 <div x-show="currentTab === 'students'" x-data="studentsModule()" class="space-y-6">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
                         <input type="text" x-model="searchQuery" placeholder="بحث بالاسم أو الكود..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
@@ -426,8 +514,9 @@
                                         <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
                                         <td class="py-3 px-4 text-slate-600" x-text="student.year + ' / ' + student.group"></td>
                                         <td class="py-3 px-4 font-mono font-bold text-slate-700" x-text="student.requiredAmount + ' ج.م'"></td>
-                                        <td class="py-3 px-4 text-center">
-                                            <button @click="$store.apex.deleteStudent(student.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                                        <td class="py-3 px-4 text-center space-x-reverse space-x-1">
+                                            <button @click="editStudent(student)" class="p-2 text-indigo-500 hover:text-indigo-700 rounded-lg" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                            <button @click="$store.apex.deleteStudent(student.id)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg" title="حذف"><i class="fa-solid fa-trash"></i></button>
                                         </td>
                                     </tr>
                                 </template>
@@ -436,6 +525,7 @@
                     </div>
                 </div>
 
+                <!-- الحضور والباركود -->
                 <div x-show="currentTab === 'attendance'" x-data="attendanceModule()" class="space-y-6">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-2xl mx-auto">
                         <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">مسح الباركود وتسجيل الحضور الفوري</h3>
@@ -458,6 +548,7 @@
                     </div>
                 </div>
 
+                <!-- الحسابات والرسوم -->
                 <div x-show="currentTab === 'accounts'" x-data="accountsModule()" class="space-y-6">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                         <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">تحصيل رسوم من الطالب</h3>
@@ -499,6 +590,7 @@
                     </div>
                 </div>
 
+                <!-- الإعدادات -->
                 <div x-show="currentTab === 'settings'" x-data="settingsModule()">
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-4xl mx-auto">
                         <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إعدادات السنتر</h3>
@@ -547,37 +639,118 @@
         }
 
         function yearsModule() {
-            return { formData: { name: '', notes: '' }, saveYear() { Alpine.store('apex').saveYear(this.formData.name, this.formData.notes); this.formData = { name: '', notes: '' }; } }
-        }
-
-        function hallsModule() {
-            return { formData: { name: '', capacity: '' }, saveHall() { Alpine.store('apex').saveHall(this.formData.name, this.formData.capacity); this.formData = { name: '', capacity: '' }; } }
-        }
-
-        function groupsModule() {
-            return { formData: { name: '', year: '', price: '' }, saveGroup() { Alpine.store('apex').saveGroup(this.formData); this.formData = { name: '', year: '', price: '' }; } }
-        }
-
-        function registerStudentModule() {
             return {
-                filteredGroups: [], lastStudent: null,
-                formData: { name: '', year: '', group: '', phone: '' },
-                filterGroups() {
-                    this.filteredGroups = Alpine.store('apex').groups.filter(g => g.year === this.formData.year);
-                    this.formData.group = '';
+                formData: { name: '', notes: '' },
+                editingId: null,
+                editItem(item) {
+                    this.editingId = item.id;
+                    this.formData = { name: item.name, notes: item.notes };
                 },
-                saveStudent() {
-                    let res = Alpine.store('apex').saveStudent(this.formData);
-                    if (res) { this.lastStudent = res; this.formData = { name: '', year: '', group: '', phone: '' }; }
+                submitForm() {
+                    Alpine.store('apex').saveYear(this.formData, this.editingId);
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.formData = { name: '', notes: '' };
+                    this.editingId = null;
                 }
             }
         }
 
+        function hallsModule() {
+            return {
+                formData: { name: '', capacity: '' },
+                editingId: null,
+                editItem(item) {
+                    this.editingId = item.id;
+                    this.formData = { name: item.name, capacity: item.capacity };
+                },
+                submitForm() {
+                    Alpine.store('apex').saveHall(this.formData, this.editingId);
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.formData = { name: '', capacity: '' };
+                    this.editingId = null;
+                }
+            }
+        }
+
+        function groupsModule() {
+            return {
+                formData: { name: '', year: '', hall: '', days: '', time: '', price: '' },
+                editingId: null,
+                editItem(item) {
+                    this.editingId = item.id;
+                    this.formData = { name: item.name, year: item.year, hall: item.hall, days: item.days, time: item.time, price: item.price };
+                },
+                submitForm() {
+                    Alpine.store('apex').saveGroup(this.formData, this.editingId);
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.formData = { name: '', year: '', hall: '', days: '', time: '', price: '' };
+                    this.editingId = null;
+                }
+            }
+        }
+
+        function registerStudentModule() {
+            return {
+                filteredGroups: [],
+                lastStudent: null,
+                editingId: null,
+                formData: { name: '', year: '', group: '', phone: '' },
+                filterGroups() {
+                    this.filteredGroups = Alpine.store('apex').groups.filter(g => g.year === this.formData.year);
+                    if (!this.editingId) {
+                        this.formData.group = '';
+                    }
+                },
+                editStudent(student) {
+                    // الانتقال لتبويب التسجيل وتعبئة البيانات للتعديل
+                    let layout = document.querySelector('[x-data]').__x?.$data || Alpine.raw(Alpine.store('apex')); 
+                    // بدلاً من ذلك، نغير التبويب مباشرة إذا أمكن أو يتم الاستماع للحدث
+                    // سنقوم بتفعيل التعديل في نفس الموديول:
+                },
+                submitForm() {
+                    let res = Alpine.store('apex').saveStudent(this.formData, this.editingId);
+                    if (this.editingId) {
+                        alert('تم تحديث بيانات الطالب بنجاح');
+                        this.resetForm();
+                    } else if (res) {
+                        this.lastStudent = res;
+                        this.formData = { name: '', year: '', group: '', phone: '' };
+                    }
+                },
+                resetForm() {
+                    this.formData = { name: '', year: '', group: '', phone: '' };
+                    this.editingId = null;
+                    this.lastStudent = null;
+                }
+            }
+        }
+
+        // دالة عالمية لتعديل الطلاب من جدول القائمة والانتقال لتبويب التسجيل
         function studentsModule() {
             return {
                 searchQuery: '',
                 get filteredStudents() {
                     return Alpine.store('apex').students.filter(s => s.name.includes(this.searchQuery) || s.code.includes(this.searchQuery));
+                },
+                editStudent(student) {
+                    // تفعيل تبويب التسجيل وتعبئة بيانات الطالب للتعديل
+                    let appEl = document.querySelector('[x-data]').__x || document.querySelector('body').__x;
+                    // الوصول لمتغير الـ currentTab وتعديله
+                    const alpineRoot = Alpine.$data(document.querySelector('body'));
+                    alpineRoot.currentTab = 'register_student';
+                    
+                    setTimeout(() => {
+                        let regModule = document.querySelector('[x-data*="registerStudentModule"]').__x.$data;
+                        regModule.editingId = student.id;
+                        regModule.formData = { name: student.name, year: student.year, group: student.group, phone: student.phone || '' };
+                        regModule.filterGroups();
+                    }, 50);
                 }
             }
         }
