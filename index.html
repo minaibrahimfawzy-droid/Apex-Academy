@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>النظام الشامل لإدارة السنتر التعليمي - Apex</title>
-    <!-- مكتبة التنسيقات Tailwind -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>أكاديمية أبيكس - النظام الشامل لإدارة السنتر التعليمي</title>
+    <!-- مكتبة التنسيقات Tailwind CSS الإصدار المستقر -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- الأيقونات FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- مكتبة توليد QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- مكتبة تصدير PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- مكتبة Alpine.js الأساسية لتشغيل البرنامج -->
+    <!-- مكتبة Alpine.js الأساسية لتشغيل التفاعلات والأقسام -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         function getDynamicPassword() {
@@ -154,7 +154,7 @@
                     } else {
                         const newStudent = { 
                             id: Date.now(), 
-                            code: 'ST-' + Math.floor(1000 + Math.random() * 9000), 
+                            code: 'APEX-' + Math.floor(1000 + Math.random() * 9000), 
                             regDate: new Date().toLocaleDateString('ar-EG'),
                             requiredAmount: groupPrice,
                             ...data 
@@ -174,7 +174,7 @@
 
                 recordAttendanceByCode(code) {
                     let student = this.students.find(s => s.code === code || s.name.trim() === code.trim());
-                    if (!student) return { success: false, message: 'الطالب غير مسجل بالسيستم!' };
+                    if (!student) return { success: false, message: 'الطالب غير مسجل بأكاديمية أبيكس!' };
 
                     let totalPaid = this.payments.filter(p => p.code === student.code).reduce((sum, p) => sum + Number(p.amount), 0);
                     let remaining = Number(student.requiredAmount) - totalPaid;
@@ -236,7 +236,7 @@
                 <i class="fa-solid fa-lock"></i>
             </div>
             <div class="space-y-2">
-                <h3 class="font-bold text-slate-800 text-xl">تسجيل الدخول الآمن</h3>
+                <h3 class="font-bold text-slate-800 text-xl">تسجيل الدخول - أكاديمية أبيكس</h3>
                 <p class="text-slate-600 text-sm leading-relaxed">الرجاء إدخال كلمة المرور الزمنية للمتابعة.</p>
             </div>
             <form @submit.prevent="$store.apex.checkPassword()" class="space-y-4">
@@ -251,7 +251,7 @@
 
     <div class="min-h-screen flex flex-col">
         <header class="bg-slate-900 text-white shadow-md p-4 flex justify-between items-center">
-            <h1 class="font-bold text-lg"><i class="fa-solid fa-graduation-cap ml-2 text-indigo-400"></i>منظومة إدارة السنتر التعليمي - Apex</h1>
+            <h1 class="font-bold text-lg"><i class="fa-solid fa-graduation-cap ml-2 text-indigo-400"></i>أكاديمية أبيكس - نظام الإدارة الشامل</h1>
             <div class="text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">التحديث المباشر مفعل</div>
         </header>
 
@@ -270,7 +270,7 @@
         </nav>
 
         <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
-            <!-- الصفحة الرئيسية (بدون مربع الترحيب) -->
+            <!-- الصفحة الرئيسية -->
             <div x-show="$store.apex.currentTab === 'home'" class="space-y-6" x-cloak>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
@@ -292,7 +292,7 @@
                 </div>
             </div>
 
-            <!-- الطلاب (مع زر التعديل بجانب الحذف) -->
+            <!-- الطلاب -->
             <div x-show="$store.apex.currentTab === 'students'" x-data="{ searchQuery: '' }" class="space-y-6" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
                     <div class="flex justify-between items-center border-b pb-3">
@@ -350,13 +350,13 @@
                 </div>
             </div>
 
-            <!-- تسجيل طالب جديد (مع توليد وعرض الـ QR) -->
+            <!-- تسجيل طالب جديد -->
             <div x-show="$store.apex.currentTab === 'register'" x-data="{ formData: { name: '', year: '', group: '', phone: '' }, lastCreated: null }" class="space-y-6 max-w-xl mx-auto" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
                     <h3 class="font-bold text-slate-800 text-base border-b pb-3">تسجيل طالب جديد وتوليد الكود والـ QR</h3>
                     <form @submit.prevent="lastCreated = $store.apex.saveStudent(formData); formData = { name: '', year: '', group: '', phone: '' }; setTimeout(() => { document.getElementById('qrcode-box').innerHTML = ''; new QRCode(document.getElementById('qrcode-box'), { text: lastCreated.code, width: 120, height: 120 }); }, 100);" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالب الرباعي</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالب</label>
                             <input type="text" x-model="formData.name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
                         </div>
                         <div>
@@ -392,9 +392,9 @@
             <!-- الحضور والكاميرا -->
             <div x-show="$store.apex.currentTab === 'attendance'" x-data="{ studentCode: '', lastScanResult: null, record() { if(!this.studentCode.trim()) return; this.lastScanResult = $store.apex.recordAttendanceByCode(this.studentCode.trim()); this.studentCode=''; } }" class="space-y-6 max-w-2xl mx-auto" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-                    <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالباركود وكود الطالب</h3>
+                    <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالكود أو الباركود</h3>
                     <div class="flex space-x-reverse space-x-2">
-                        <input type="text" x-model="studentCode" @keyup.enter="record()" placeholder="أدخل كود الطالب أو اسحبه بالماسح..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-600">
+                        <input type="text" x-model="studentCode" @keyup.enter="record()" placeholder="أدخل كود الطالب..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-600">
                         <button @click="record()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">تسجيل</button>
                     </div>
                     <template x-if="lastScanResult">
@@ -412,7 +412,7 @@
                 </div>
             </div>
 
-            <!-- المجموعات (مع اختيار الأيام منفردة، التوقيت من 1 لـ 12 متعدداً، وزر التعديل) -->
+            <!-- المجموعات -->
             <div x-show="$store.apex.currentTab === 'groups'" x-data="{ formData: { name: '', year: '', hall: '', days: [], times: [], price: '' } }" class="space-y-6" x-cloak>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
@@ -473,9 +473,9 @@
                                 </select>
                             </div>
 
-                            <!-- الأيام منفردة (اختيار متعدد) -->
+                            <!-- الأيام منفردة -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">أيام الأسبوع (اختر يوم أو أكثر)</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">أيام الأسبوع</label>
                                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border text-xs">
                                     <template x-for="day in ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة']">
                                         <label class="flex items-center gap-2 cursor-pointer">
@@ -486,9 +486,9 @@
                                 </div>
                             </div>
 
-                            <!-- التوقيت الساعي من 1 لـ 12 (اختيار متعدد صباحاً ومساءً) -->
+                            <!-- التوقيت الساعي -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">التوقيت الساعي (اختر التوقيتات المناسبة)</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">التوقيت الساعي</label>
                                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border text-xs max-h-40 overflow-y-auto">
                                     <template x-for="t in ['1 صباحاً', '2 صباحاً', '3 صباحاً', '4 صباحاً', '5 صباحاً', '6 صباحاً', '7 صباحاً', '8 صباحاً', '9 صباحاً', '10 صباحاً', '11 صباحاً', '12 ظهراً', '1 مساءً', '2 مساءً', '3 مساءً', '4 مساءً', '5 مساءً', '6 مساءً', '7 مساءً', '8 مساءً', '9 مساءً', '10 مساءً', '11 مساءً', '12 منتصف الليل']">
                                         <label class="flex items-center gap-1 cursor-pointer">
@@ -580,7 +580,7 @@
                 </div>
             </div>
 
-            <!-- المعلمين (مع زر التعديل) -->
+            <!-- المعلمين -->
             <div x-show="$store.apex.currentTab === 'teachers'" x-data="{ showModal: false, formData: { name: '', subject: '', phone: '', ratio: '' } }" class="space-y-6" x-cloak>
                 <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <h3 class="font-bold text-slate-800 text-lg">قائمة المعلمين المعتمدين</h3>
@@ -640,7 +640,7 @@
                 </div>
             </div>
 
-            <!-- القاعات (مع زر التعديل) -->
+            <!-- القاعات -->
             <div x-show="$store.apex.currentTab === 'halls'" x-data="{ hallName: '' }" class="space-y-6 max-w-xl mx-auto" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
                     <h3 class="font-bold text-slate-800 text-base border-b pb-3">إدارة القاعات الدراسية</h3>
@@ -678,7 +678,7 @@
                 </div>
             </div>
 
-            <!-- السنوات (مع زر التعديل) -->
+            <!-- السنوات -->
             <div x-show="$store.apex.currentTab === 'years'" x-data="{ yearName: '' }" class="space-y-6 max-w-xl mx-auto" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
                     <h3 class="font-bold text-slate-800 text-base border-b pb-3">إدارة السنوات الدراسية</h3>
@@ -716,7 +716,7 @@
                 </div>
             </div>
 
-            <!-- الكارنيهات (مع QR دمج الخلفية وتحميل PDF فردي وجماعي) -->
+            <!-- الكارنيهات -->
             <div x-show="$store.apex.currentTab === 'cards'" x-data="{
                 downloadCard(id) {
                     const element = document.getElementById('card-' + id);
@@ -729,7 +729,7 @@
             }" class="space-y-6" x-cloak>
                 <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
                     <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 gap-3">
-                        <h3 class="font-bold text-slate-800 text-base">بطاقات تعريف الطلاب (الكارنيهات مع QR وتحميل PDF)</h3>
+                        <h3 class="font-bold text-slate-800 text-base">بطاقات تعريف الطلاب (الكارنيهات)</h3>
                         <div class="flex items-center gap-3">
                             <label class="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-2">
                                 <i class="fa-solid fa-image"></i> رفع تصميم كارنيه مخصص
