@@ -1,6 +1,6 @@
-const CACHE_NAME = 'apex-v6';
+const CACHE_NAME = 'apex-v10';
 
-// الملفات الأساسية للتخزين السريع (محدثة لتشمل الموديولات الجديدة واللوجو)
+// الملفات الأساسية للتخزين السريع (محدثة لتشمل الموديولات الجديدة واللوجو)[cite: 1]
 const INITIAL_ASSETS = [
     './',
     './index.html',
@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// استراتيجية Cache First مع حفظ أي ملف يُطلب تلقائياً
+// استراتيجية Cache First مع حفظ أي ملف يُطلب تلقائياً[cite: 1]
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
-                // في حالة الأوفلاين التام
+                // في حالة الأوفلاين التام[cite: 1]
             });
         })
     );

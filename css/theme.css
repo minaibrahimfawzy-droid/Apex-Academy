@@ -1,0 +1,9 @@
+/* Styling place-holders for custom component overrides, form focus styles, and smooth transitions */
+.btn-primary {
+    background-color: #4f46e5;
+    color: #ffffff;
+    transition: all 0.2s ease-in-out;
+}
+.btn-primary:hover {
+    background-color: #4338ca;
+}

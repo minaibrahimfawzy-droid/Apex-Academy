@@ -24,7 +24,13 @@
         <aside class="w-full lg:w-72 bg-white border-l border-slate-200/80 flex flex-col shadow-sm">
             <!-- الهيدر واللوجو -->
             <div class="flex items-center space-x-reverse space-x-3 p-5 border-b border-slate-100">
-                <img src="images/logo.png" alt="شعار السنتر" class="w-12 h-12 object-contain rounded-2xl bg-indigo-50 p-1.5 shadow-sm">
+                <!-- صورة اللوجو مع بديل تلقائي في حال عدم وجود الملف -->
+                <div class="relative w-12 h-12 flex-shrink-0">
+                    <img src="images/logo.png" alt="شعار السنتر" class="w-12 h-12 object-contain rounded-2xl bg-indigo-50 p-1 shadow-sm" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white items-center justify-center font-bold text-lg shadow-sm absolute inset-0" style="display: none;">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                </div>
                 <div>
                     <h1 class="font-bold text-slate-800 text-base" x-text="settings.centerName || 'Apex Academy'"></h1>
                     <span class="text-[10px] text-slate-400 font-mono">نظام الإدارة المتكامل</span>
@@ -73,7 +79,6 @@
             <div class="p-8 flex-1">
                 <!-- السنوات الدراسية -->
                 <div x-show="currentTab === 'years'" x-data="yearsModule()" x-init="initYears()">
-                    <!-- محتوى قسم السنوات -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                             <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">قائمة السنوات الدراسية المسجلة</h3>
