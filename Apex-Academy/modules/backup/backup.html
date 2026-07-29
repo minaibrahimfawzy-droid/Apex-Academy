@@ -1,0 +1,28 @@
+<div x-data="backupModule()" class="space-y-6 max-w-2xl mx-auto">
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+        <h3 class="font-bold text-slate-800 text-lg border-b pb-3">النسخ الاحتياطي واستعادة البيانات</h3>
+
+        <!-- تصدير النسخة -->
+        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+                <h4 class="font-bold text-slate-800 text-sm">تصدير نسخة احتياطية كاملة</h4>
+                <p class="text-xs text-slate-500">تنزيل ملف JSON يضم كامل بيانات الطلاب والمعلمين والمالية.</p>
+            </div>
+            <button @click="exportData()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all">
+                تنزيل النسخة
+            </button>
+        </div>
+
+        <!-- استعادة النسخة -->
+        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+                <h4 class="font-bold text-slate-800 text-sm">استعادة بيانات من ملف</h4>
+                <p class="text-xs text-slate-500">رفع ملف JSON سابق لتعويض أو استعادة البيانات.</p>
+            </div>
+            <label class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs cursor-pointer transition-all">
+                اختيار ملف
+                <input type="file" @change="importData($event)" accept=".json" class="hidden">
+            </label>
+        </div>
+    </div>
+</div>

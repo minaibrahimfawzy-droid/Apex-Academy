@@ -1,0 +1,4 @@
+/* تنسيقات أزرار الحضور والغياب */
+.attendance-btn-active {
+    transform: scale(1.03);
+}

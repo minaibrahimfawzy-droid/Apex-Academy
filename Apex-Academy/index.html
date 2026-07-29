@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Academy - نظام إدارة الأكاديمية</title>
+
+    <!-- PWA Manifest & Theme Color -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- App Stylesheet -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="font-cairo bg-slate-100 text-slate-800 antialiased min-h-screen flex" x-data="mainApp()" x-init="initApp()">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 min-h-screen fixed right-0 top-0 bottom-0 z-40 no-print">
+        <div class="space-y-6">
+            <!-- شعار النظام -->
+            <div class="flex items-center space-x-reverse space-x-3 px-2 py-3 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-brand-600/30">
+                    A
+                </div>
+                <div>
+                    <h1 class="font-black text-white text-base leading-tight">Apex Academy</h1>
+                    <span class="text-[10px] text-slate-400 font-semibold">نظام الإدارة الذكي</span>
+                </div>
+            </div>
+
+            <!-- عناصر التصفح والموديولات -->
+            <nav class="space-y-1">
+                <button @click="loadModule('dashboard')" :class="activeModule === 'dashboard' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-chart-pie w-5"></i>
+                    <span>الرئيسية</span>
+                </button>
+
+                <button @click="loadModule('students')" :class="activeModule === 'students' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-user-graduate w-5"></i>
+                    <span>الطلاب</span>
+                </button>
+
+                <button @click="loadModule('teachers')" :class="activeModule === 'teachers' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-chalkboard-user w-5"></i>
+                    <span>المعلمون</span>
+                </button>
+
+                <button @click="loadModule('attendance')" :class="activeModule === 'attendance' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-clipboard-user w-5"></i>
+                    <span>الحضور والغياب</span>
+                </button>
+
+                <button @click="loadModule('subscriptions')" :class="activeModule === 'subscriptions' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i>
+                    <span>الاشتراكات</span>
+                </button>
+
+                <button @click="loadModule('finance')" :class="activeModule === 'finance' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-wallet w-5"></i>
+                    <span>المالية والأرباح</span>
+                </button>
+
+                <button @click="loadModule('cards')" :class="activeModule === 'cards' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-id-card w-5"></i>
+                    <span>طباعة الكروت</span>
+                </button>
+
+                <button @click="loadModule('qr')" :class="activeModule === 'qr' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-qrcode w-5"></i>
+                    <span>ماسح QR Code</span>
+                </button>
+
+                <button @click="loadModule('settings')" :class="activeModule === 'settings' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-gear w-5"></i>
+                    <span>الإعدادات</span>
+                </button>
+
+                <button @click="loadModule('backup')" :class="activeModule === 'backup' ? 'bg-brand-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-400 hover:text-white'" class="w-full flex items-center space-x-reverse space-x-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                    <i class="fa-solid fa-database w-5"></i>
+                    <span>النسخ الاحتياطي</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- أسفل القائمة الجانبية -->
+        <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+            تطبيق PWA v1.0.0
+        </div>
+    </aside>
+
+    <!-- المساحة الرئيسية للمحتوى (Main Content Area) -->
+    <main class="flex-1 mr-64 p-8 min-h-screen">
+        <!-- الهيدر العلوي -->
+        <header class="flex justify-between items-center mb-8 pb-4 border-b border-slate-200 no-print">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800" x-text="moduleTitles[activeModule] || 'Apex Academy'"></h2>
+                <p class="text-xs text-slate-400 mt-1">نظام إدارة وتنظيم بيانات الأكاديمية</p>
+            </div>
+            <div class="flex items-center space-x-reverse space-x-3">
+                <div id="connection-status" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>جاهز للأوفلاين</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- حاوية عرض الموديولات الديناميكية -->
+        <div id="module-container">
+            <!-- يتم تحميل صفحات الأقسام هنا عبر الـ Module Loader -->
+        </div>
+    </main>
+
+    <!-- حاوية الإشعارات (Toast Notifications) -->
+    <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 no-print"></div>
+
+    <!-- ملفات JS التأسيسية -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/helpers.js"></script>
+    <script src="assets/js/ui.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <!-- تسجيل Service Worker ليدعم الأوفلاين والتحديثات عبر GitHub -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker Registered Successfully:', reg.scope);
+                    })
+                    .catch((err) => {
+                        console.error('Service Worker Registration Failed:', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
