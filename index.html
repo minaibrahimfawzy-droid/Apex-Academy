@@ -3,212 +3,977 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Academy - نظام إدارة الأكاديمية الذكي</title>
-
-    <!-- PWA Manifest & Theme -->
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#4f46e5">
-
-    <!-- Tailwind CSS (CDN) -->
+    <title>Apex Academy - نظام إدارة الأكاديمية</title>
+    <!-- المكتبات الخارجية Required Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome Icons (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Alpine.js (CDN) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Local CSS Files -->
-    <link rel="stylesheet" href="./css/main.css">
-    <link rel="stylesheet" href="./css/layout.css">
-    <link rel="stylesheet" href="./css/components.css">
-    <link rel="stylesheet" href="./css/theme.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .print-area { box-shadow: none !important; margin: 0 auto !important; }
+        }
+        .student-card {
+            width: 3.375in;
+            height: 2.125in;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+            border-radius: 12px;
+            color: white;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen">
+<body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen" x-data="mainApp()" x-init="initApp()">
 
-    <!-- 🔒 1. شاشة القفل ودخول كلمة السر المتغيرة -->
-    <div id="password-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-slate-100">
-            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
-                <i class="fa-solid fa-lock"></i>
-            </div>
+    <!-- الهيدر الرئيسي والشريط العلوي Navigation Bar -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Apex Academy</h2>
-            <p class="text-slate-500 text-sm mb-6">يرجى إدخال كلمة السر الخاصة بالفترة الحالية للمتابعة</p>
+            <div class="flex items-center space-x-reverse space-x-3">
+                <!-- زر الرجوع للرئيسية (يظهر فقط عند فتح أي قسم فرعي) -->
+                <template x-if="currentTab !== 'dashboard'">
+                    <button @click="currentTab = 'dashboard'" class="bg-brand-600 hover:bg-brand-700 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        <span>الرجوع للرئيسية</span>
+                    </button>
+                </template>
 
-            <form onsubmit="handlePasswordSubmit(event)" class="space-y-4">
-                <div>
-                    <input type="password" 
-                           id="app-password-input" 
-                           placeholder="أدخل كلمة السر" 
-                           class="w-full px-5 py-3.5 text-center text-lg tracking-widest bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                           required>
-                </div>
-
-                <div id="password-error-msg" class="hidden text-red-500 text-xs font-semibold bg-red-50 py-2 rounded-xl">
-                    <i class="fa-solid fa-triangle-exclamation ml-1"></i> كلمة السر غير صحيحة!
-                </div>
-
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition duration-200 active:scale-95">
-                    دخول النظام
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- 📱 2. واجهة التطبيق الرئيسية (تظهر بعد إدخال كلمة السر) -->
-    <div id="app-main-content" class="hidden min-h-screen flex flex-col md:flex-row">
-
-        <!-- القائمة الجانبية (Sidebar) -->
-        <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col">
-            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-                <div class="flex items-center space-x-3 space-x-reverse">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
-                        A
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-white text-lg leading-tight">Apex Academy</h1>
-                        <span class="text-xs text-indigo-400">الإدارة الذكية</span>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white text-sm">A</div>
+                    <h1 class="font-extrabold text-base md:text-lg text-white" x-text="academyName">Apex Academy</h1>
                 </div>
             </div>
 
-            <!-- أزرار الأقسام (Navigation Menu) -->
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                <button onclick="loadModule('dashboard')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-chart-pie w-6"></i>
-                    <span>الرئيسية</span>
+            <!-- أزرار الإجراءات وحفظ المدخلات -->
+            <div class="flex items-center gap-2">
+                <button @click="saveAllData()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-emerald-600/20">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span class="hidden sm:inline">حفظ كافة المدخلات</span>
                 </button>
+                <button @click="currentTab = 'backup'" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-                <button onclick="loadModule('students')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-user-graduate w-6"></i>
+    <!-- محتوى الشاشات المعروضة بالشاشة الكاملة -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- 1. لوحة التحكم (الرئيسية) -->
+        <div x-show="currentTab === 'dashboard'" x-cloak>
+            <!-- أزرار القائمة الرئيسية لتوجيه المستخدم بالشاشة الكاملة -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6 no-print">
+                <button @click="currentTab = 'students'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-indigo-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-user-graduate text-2xl text-indigo-600"></i>
                     <span>الطلاب</span>
                 </button>
-
-                <button onclick="loadModule('teachers')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-chalkboard-user w-6"></i>
-                    <span>المعلمين</span>
-                </button>
-
-                <button onclick="loadModule('finance')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-wallet w-6"></i>
-                    <span>المالية</span>
-                </button>
-
-                <button onclick="loadModule('attendance')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-clipboard-user w-6"></i>
+                <button @click="currentTab = 'attendance'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-emerald-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-clipboard-user text-2xl text-emerald-600"></i>
                     <span>الحضور والغياب</span>
                 </button>
-
-                <button onclick="loadModule('subscriptions')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-id-card w-6"></i>
+                <button @click="currentTab = 'subscriptions'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-amber-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-id-card text-2xl text-amber-600"></i>
                     <span>الاشتراكات</span>
                 </button>
-
-                <button onclick="loadModule('cards')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-credit-card w-6"></i>
+                <button @click="currentTab = 'finance'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-rose-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-wallet text-2xl text-rose-600"></i>
+                    <span>المالية</span>
+                </button>
+                <button @click="currentTab = 'teachers'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-chalkboard-user text-2xl text-blue-600"></i>
+                    <span>المعلمين</span>
+                </button>
+                <button @click="currentTab = 'cards'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-purple-500 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-address-card text-2xl text-purple-600"></i>
                     <span>الكروت</span>
                 </button>
-
-                <button onclick="loadModule('qr')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-qrcode w-6"></i>
-                    <span>ماسح QR</span>
-                </button>
-
-                <button onclick="loadModule('settings')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-gear w-6"></i>
-                    <span>الإعدادات</span>
-                </button>
-
-                <button onclick="loadModule('backup')" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition text-right">
-                    <i class="fa-solid fa-database w-6"></i>
-                    <span>النسخ الاحتياطي</span>
-                </button>
-            </nav>
-
-            <div class="p-4 border-t border-slate-800">
-                <button onclick="lockApp()" class="w-full flex items-center justify-center space-x-2 space-x-reverse px-4 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl transition text-sm">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>قفل التطبيق</span>
+                <button @click="currentTab = 'qr'" class="p-4 bg-white rounded-2xl border border-slate-200/80 hover:border-slate-800 shadow-sm text-center transition-all font-bold text-xs text-slate-700 flex flex-col items-center gap-2 hover:shadow-md">
+                    <i class="fa-solid fa-qrcode text-2xl text-slate-700"></i>
+                    <span>مسح الـ QR</span>
                 </button>
             </div>
-        </aside>
 
-        <!-- منطقة المحتوى الرئيسية (يتم تحميل الأقسام بداخلها) -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
-            <div id="module-container">
-                <!-- سيتم جلب محتوى الأقسام هنا بواسطة app.js -->
+            <!-- محتوى لوحة التحكم dashboardModule -->
+            <div x-data="dashboardModule()" x-init="initDashboard()" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400">إجمالي الطلاب</p>
+                            <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.totalStudents">0</h3>
+                            <span class="inline-block mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-arrow-up text-xs mr-1"></i> نشطين بالنظام</span>
+                        </div>
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-user-graduate"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400">المعلمين والقائمين</p>
+                            <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.totalTeachers">0</h3>
+                            <span class="inline-block mt-2 text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">مدرسين معتمدين</span>
+                        </div>
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400">اشتراكات سارية</p>
+                            <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.activeSubscriptions">0</h3>
+                            <span class="inline-block mt-2 text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">هذا الشهر</span>
+                        </div>
+                        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-id-card"></i></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400">إجمالي الإيرادات</p>
+                            <h3 class="text-2xl font-extrabold text-slate-800 mt-1" x-text="formatCurrency(stats.totalRevenue)">0 ج.م</h3>
+                            <span class="inline-block mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">صافي المحصل</span>
+                        </div>
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-wallet"></i></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                    <h4 class="font-bold text-slate-800 text-lg mb-4">أحدث الطلاب المسجلين</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">الكود</th>
+                                    <th class="py-3 px-4">اسم الطالب</th>
+                                    <th class="py-3 px-4">الصف الدراسي</th>
+                                    <th class="py-3 px-4">رقم الهاتف</th>
+                                    <th class="py-3 px-4">تاريخ التسجيل</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="student in recentStudents" :key="student.id">
+                                    <tr class="hover:bg-slate-50/80 transition-all">
+                                        <td class="py-3 px-4 font-mono font-bold text-indigo-600" x-text="student.code"></td>
+                                        <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
+                                        <td class="py-3 px-4 text-slate-600" x-text="student.grade"></td>
+                                        <td class="py-3 px-4 font-mono text-slate-600" x-text="student.phone"></td>
+                                        <td class="py-3 px-4 text-slate-400 text-xs" x-text="student.createdAt"></td>
+                                    </tr>
+                                </template>
+                                <template x-if="recentStudents.length === 0">
+                                    <tr><td colspan="5" class="py-6 text-center text-slate-400">لا توجد بيانات طلاب مسجلة حالياً</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </main>
-    </div>
+        </div>
 
-    <!-- ⚙️ 3. برمجة كلمة السر المتغيرة وشروط الفتح -->
+        <!-- 2. قسم إدارة الطلاب (شاشة كاملة) -->
+        <div x-show="currentTab === 'students'" x-cloak>
+            <div x-data="studentsModule()" x-init="initStudents()" class="space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="w-full md:w-96 relative">
+                        <input type="text" x-model="searchQuery" placeholder="ابحث باسم الطالب أو رقم الهاتف أو الكود..." class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-slate-50">
+                        <i class="fa-solid fa-search absolute right-3.5 top-3.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <button @click="openAddModal()" class="w-full md:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-reverse space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>إضافة طالب جديد</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-4 px-4">الكود</th>
+                                    <th class="py-4 px-4">اسم الطالب</th>
+                                    <th class="py-4 px-4">الصف الدراسي</th>
+                                    <th class="py-4 px-4">هاتف الطالب</th>
+                                    <th class="py-4 px-4">هاتف ولي الأمر</th>
+                                    <th class="py-4 px-4 text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="student in filteredStudents" :key="student.id">
+                                    <tr class="hover:bg-slate-50/80 transition-all">
+                                        <td class="py-3 px-4 font-mono font-bold text-indigo-600" x-text="student.code"></td>
+                                        <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
+                                        <td class="py-3 px-4 text-slate-600" x-text="student.grade"></td>
+                                        <td class="py-3 px-4 font-mono text-slate-600" x-text="student.phone || '-'"></td>
+                                        <td class="py-3 px-4 font-mono text-slate-600" x-text="student.parentPhone || '-'"></td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center justify-center space-x-reverse space-x-2">
+                                                <button @click="editStudent(student)" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                                                <button @click="deleteStudent(student.id)" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-if="filteredStudents.length === 0">
+                                    <tr><td colspan="6" class="py-8 text-center text-slate-400">لا يوجد طلاب مطابقون للبحث</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal -->
+                <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div class="bg-white max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h3 class="font-bold text-slate-800 text-lg" x-text="isEdit ? 'تعديل بيانات طالب' : 'إضافة طالب جديد'"></h3>
+                            <button @click="showModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form @submit.prevent="saveStudent" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالب رباعي</label>
+                                <input type="text" x-model="formData.name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">الصف الدراسي</label>
+                                <select x-model="formData.grade" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm">
+                                    <option value="">اختر الصف الدراسي...</option>
+                                    <option value="الأول الثانوي">الأول الثانوي</option>
+                                    <option value="الثاني الثانوي">الثاني الثانوي</option>
+                                    <option value="الثالث الثانوي">الثالث الثانوي</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتف الطالب</label>
+                                    <input type="text" x-model="formData.phone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم هاتف ولي الأمر</label>
+                                    <input type="text" x-model="formData.parentPhone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm">
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-reverse space-x-3 pt-4 border-t border-slate-100">
+                                <button type="button" @click="showModal = false" class="px-5 py-2.5 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 text-sm font-bold">إلغاء</button>
+                                <button type="submit" class="px-5 py-2.5 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 text-sm font-bold shadow-md shadow-indigo-600/20">حفظ البيانات</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. قسم الحضور والغياب (شاشة كاملة) -->
+        <div x-show="currentTab === 'attendance'" x-cloak>
+            <div x-data="attendanceModule()" x-init="initAttendance()" class="space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center space-x-reverse space-x-3 w-full md:w-auto">
+                        <label class="text-xs font-bold text-slate-700">تاريخ اليوم:</label>
+                        <input type="date" x-model="selectedDate" @change="loadAttendance()" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="w-full md:w-80 relative">
+                        <input type="text" x-model="searchQuery" placeholder="بحث باسم الطالب أو الكود..." class="w-full pr-10 pl-4 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50">
+                        <i class="fa-solid fa-search absolute right-3.5 top-3 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-4 px-4">الكود</th>
+                                    <th class="py-4 px-4">اسم الطالب</th>
+                                    <th class="py-4 px-4">الصف الدراسي</th>
+                                    <th class="py-4 px-4 text-center">حالة الحضور</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="student in filteredStudents" :key="student.id">
+                                    <tr class="hover:bg-slate-50/80 transition-all">
+                                        <td class="py-3 px-4 font-mono font-bold text-indigo-600" x-text="student.code"></td>
+                                        <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
+                                        <td class="py-3 px-4 text-slate-600" x-text="student.grade"></td>
+                                        <td class="py-3 px-4 text-center">
+                                            <div class="flex items-center justify-center space-x-reverse space-x-2">
+                                                <button @click="markStatus(student.id, 'present')" :class="getStatus(student.id) === 'present' ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30' : 'bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-700'" class="px-4 py-1.5 rounded-xl text-xs transition-all">حاضر <i class="fa-solid fa-check mr-1"></i></button>
+                                                <button @click="markStatus(student.id, 'absent')" :class="getStatus(student.id) === 'absent' ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-600/30' : 'bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700'" class="px-4 py-1.5 rounded-xl text-xs transition-all">غائب <i class="fa-solid fa-xmark mr-1"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. قسم الاشتراكات (شاشة كاملة) -->
+        <div x-show="currentTab === 'subscriptions'" x-cloak>
+            <div x-data="subscriptionsModule()" x-init="initSubscriptions()" class="space-y-6">
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <h3 class="font-bold text-slate-800 text-lg">سجل اشتراكات الطلاب</h3>
+                    <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-reverse space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>تحصيل اشتراك جديد</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-4 px-4">الطالب</th>
+                                    <th class="py-4 px-4">الشهر / الدورة</th>
+                                    <th class="py-4 px-4">المبلغ Paid</th>
+                                    <th class="py-4 px-4">تاريخ الدفع</th>
+                                    <th class="py-4 px-4 text-center">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="sub in subscriptions" :key="sub.id">
+                                    <tr class="hover:bg-slate-50/80 transition-all">
+                                        <td class="py-3 px-4 font-bold text-slate-800" x-text="getStudentName(sub.studentId)"></td>
+                                        <td class="py-3 px-4 text-slate-600" x-text="sub.month"></td>
+                                        <td class="py-3 px-4 font-mono font-bold text-emerald-600" x-text="formatCurrency(sub.amount)"></td>
+                                        <td class="py-3 px-4 text-slate-400 font-mono text-xs" x-text="sub.paymentDate"></td>
+                                        <td class="py-3 px-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">ساري</span></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal -->
+                <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
+                        <h3 class="font-bold text-slate-800 text-lg border-b pb-2">تحصيل اشتراك شهري</h3>
+                        <form @submit.prevent="saveSubscription" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">اختر الطالب</label>
+                                <select x-model="formData.studentId" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                    <option value="">حدد الطالب...</option>
+                                    <template x-for="st in students" :key="st.id">
+                                        <option :value="st.id" x-text="st.name + ' (' + st.code + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">عن شهر / فترة</label>
+                                <input type="text" x-model="formData.month" placeholder="مثال: يوليو 2026" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">المبلغ المحصل (ج.م)</label>
+                                <input type="number" x-model="formData.amount" min="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono">
+                            </div>
+                            <div class="flex justify-end space-x-reverse space-x-3 pt-3">
+                                <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء</button>
+                                <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">حفظ وتحصيل</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. قسم المالية (شاشة كاملة) -->
+        <div x-show="currentTab === 'finance'" x-cloak>
+            <div x-data="financeModule()" x-init="initFinance()" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400">إجمالي المقبوضات (الإيرادات)</p>
+                        <h3 class="text-2xl font-extrabold text-emerald-600 mt-1" x-text="formatCurrency(totalIncome)">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400">إجمالي المصروفات</p>
+                        <h3 class="text-2xl font-extrabold text-rose-600 mt-1" x-text="formatCurrency(totalExpense)">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400">صافي الأرباح</p>
+                        <h3 class="text-2xl font-extrabold text-indigo-600 mt-1" x-text="formatCurrency(netProfit)">0</h3>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <h3 class="font-bold text-slate-800 text-lg">سجل المعاملات المالية</h3>
+                    <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all">
+                        <i class="fa-solid fa-plus ml-1"></i> إضافة معاملة جديدة
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-4 px-4">نوع الحركة</th>
+                                    <th class="py-4 px-4">التفاصيل / البيان</th>
+                                    <th class="py-4 px-4">التصنيف</th>
+                                    <th class="py-4 px-4">المبلغ</th>
+                                    <th class="py-4 px-4">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="item in financeRecords" :key="item.id">
+                                    <tr class="hover:bg-slate-50/80 transition-all">
+                                        <td class="py-3 px-4"><span :class="item.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" class="px-2.5 py-0.5 rounded-full text-xs font-bold" x-text="item.type === 'income' ? 'إيراد' : 'مصروف'"></span></td>
+                                        <td class="py-3 px-4 font-bold text-slate-800" x-text="item.title"></td>
+                                        <td class="py-3 px-4 text-slate-600" x-text="item.category || 'عام'"></td>
+                                        <td class="py-3 px-4 font-mono font-bold" :class="item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'" x-text="formatCurrency(item.amount)"></td>
+                                        <td class="py-3 px-4 text-slate-400 font-mono text-xs" x-text="item.date"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal -->
+                <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
+                        <h3 class="font-bold text-slate-800 text-lg border-b pb-2">تسجيل معاملة جديدة</h3>
+                        <form @submit.prevent="saveTransaction" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">نوع المعاملة</label>
+                                <select x-model="formData.type" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                    <option value="income">إيراد (+)</option>
+                                    <option value="expense">مصروف (-)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">البيان / العنوان</label>
+                                <input type="text" x-model="formData.title" placeholder="مثال: فاتورة كهرباء / أدوات كتابية" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م)</label>
+                                <input type="number" x-model="formData.amount" min="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono">
+                            </div>
+                            <div class="flex justify-end space-x-reverse space-x-3 pt-3">
+                                <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء</button>
+                                <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">تسجيل المعاملة</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. قسم المعلمين (شاشة كاملة) -->
+        <div x-show="currentTab === 'teachers'" x-cloak>
+            <div x-data="teachersModule()" x-init="initTeachers()" class="space-y-6">
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <h3 class="font-bold text-slate-800 text-lg">قائمة المعلمين المعتمدين</h3>
+                    <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-reverse space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>إضافة معلم جديد</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="teacher in teachers" :key="teacher.id">
+                        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between">
+                            <div class="space-y-3">
+                                <div class="flex items-center space-x-reverse space-x-3">
+                                    <div class="w-12 h-12 rounded-xl bg-slate-100 text-indigo-600 font-extrabold flex items-center justify-center text-xl">
+                                        <span x-text="teacher.name.charAt(0)"></span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-base" x-text="teacher.name"></h4>
+                                        <p class="text-xs text-indigo-600 font-semibold" x-text="teacher.subject"></p>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-slate-500 space-y-1 pt-2 border-t border-slate-100">
+                                    <p><i class="fa-solid fa-phone text-slate-400 ml-1"></i> <span x-text="teacher.phone || 'غير محدد'"></span></p>
+                                    <p><i class="fa-solid fa-percent text-slate-400 ml-1"></i> نسبة المعلم: <span class="font-bold text-slate-700" x-text="teacher.ratio + '%'"></span></p>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-reverse space-x-2 mt-4 pt-3 border-t border-slate-100">
+                                <button @click="deleteTeacher(teacher.id)" class="text-xs text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-bold transition-all">حذف</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Modal -->
+                <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
+                        <h3 class="font-bold text-slate-800 text-lg border-b pb-2">إضافة معلم جديد</h3>
+                        <form @submit.prevent="saveTeacher" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">اسم المعلم</label>
+                                <input type="text" x-model="formData.name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">المادة الدراسية</label>
+                                <input type="text" x-model="formData.subject" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف</label>
+                                <input type="text" x-model="formData.phone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">نسبة المعلم (%)</label>
+                                <input type="number" x-model="formData.ratio" min="0" max="100" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            </div>
+                            <div class="flex justify-end space-x-reverse space-x-3 pt-3">
+                                <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء</button>
+                                <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">حفظ</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. قسم الكروت والطباعة (شاشة كاملة) -->
+        <div x-show="currentTab === 'cards'" x-cloak>
+            <div x-data="cardsModule()" x-init="initCards()" class="space-y-6">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 no-print">
+                    <div class="w-full md:w-96">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اختر الطالب لإنشاء الكارت:</label>
+                        <select x-model="selectedStudentId" @change="generateCard()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                            <option value="">حدد الطالب...</option>
+                            <template x-for="st in students" :key="st.id">
+                                <option :value="st.id" x-text="st.name + ' (' + st.code + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <button @click="printCard()" :disabled="!selectedStudent" class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-reverse space-x-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span>طباعة الكارت</span>
+                    </button>
+                </div>
+
+                <div class="flex justify-center py-8">
+                    <template x-if="selectedStudent">
+                        <div id="printable-card" class="student-card print-area p-6 flex flex-col justify-between shadow-2xl">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="font-extrabold text-lg text-white">Apex Academy</h2>
+                                    <p class="text-[10px] text-indigo-200">بطاقة هوية طالب</p>
+                                </div>
+                                <div class="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center font-black">A</div>
+                            </div>
+                            <div class="space-y-1 my-2">
+                                <h3 class="font-bold text-base text-white" x-text="selectedStudent.name"></h3>
+                                <p class="text-xs text-indigo-100" x-text="selectedStudent.grade"></p>
+                                <p class="text-xs font-mono text-indigo-200">كود: <span x-text="selectedStudent.code"></span></p>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <div class="text-[9px] text-indigo-200">صادرة من نظام الأكاديمية الرسمي</div>
+                                <div id="qrcode-container" class="bg-white p-1 rounded-md"></div>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="!selectedStudent">
+                        <div class="text-slate-400 text-sm py-12 text-center">يرجى اختيار طالب من القائمة ليتم عرض الكارت وتوليد الـ QR.</div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. قسم مسح QR Code (شاشة كاملة) -->
+        <div x-show="currentTab === 'qr'" x-cloak>
+            <div class="space-y-6 max-w-xl mx-auto text-center bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg">مسح كود الطالب للتسجيل السريع</h3>
+                <p class="text-xs text-slate-500">قم بتوجيه كاميرا الجهاز نحو كود الطالب لتسجيل الحضور تلقائياً.</p>
+                <div id="reader" class="overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 min-h-[250px] flex items-center justify-center">
+                    <span class="text-xs text-slate-400">كاميرا المسح جاهزة</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. قسم النسخ الاحتياطي والإعدادات (شاشة كاملة) -->
+        <div x-show="currentTab === 'backup'" x-cloak>
+            <div class="space-y-6 max-w-2xl mx-auto">
+                <div x-data="settingsModule()" x-init="initSettings()" class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-800 text-lg border-b pb-3">إعدادات الأكاديمية</h3>
+                    <form @submit.prevent="saveSettings" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم الأكاديمية الرسمي</label>
+                            <input type="text" x-model="settings.academyName" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">العملة المستخدمة</label>
+                            <input type="text" x-model="settings.currency" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/20">
+                            حفظ الإعدادات
+                        </button>
+                    </form>
+                </div>
+
+                <div x-data="backupModule()" class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+                    <h3 class="font-bold text-slate-800 text-lg border-b pb-3">النسخ الاحتياطي واستعادة البيانات</h3>
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">تصدير نسخة احتياطية كاملة</h4>
+                            <p class="text-xs text-slate-500">تنزيل ملف JSON يضم كامل البيانات.</p>
+                        </div>
+                        <button @click="exportData()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all">تنزيل النسخة</button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">استعادة بيانات من ملف</h4>
+                            <p class="text-xs text-slate-500">رفع ملف JSON سابق لتعويض البيانات.</p>
+                        </div>
+                        <label class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer transition-all">
+                            اختيار ملف
+                            <input type="file" @change="importData($event)" accept=".json" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- محرك النظام البرمجي الشامل Core Logic Script -->
     <script>
-        // حساب كلمة السر المتغيرة حسب المعادلة المطلوبة
-        function getDynamicPassword() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth() + 1; // الأشهر من 1 إلى 12
+        // Helper Object التخزين والأدوات
+        const ApexConfig = {
+            storageKeys: {
+                students: 'apex_students',
+                teachers: 'apex_teachers',
+                attendance: 'apex_attendance',
+                subscriptions: 'apex_subscriptions',
+                finance: 'apex_finance',
+                settings: 'apex_settings'
+            },
+            defaultSettings: { academyName: 'Apex Academy', currency: 'ج.م' }
+        };
 
-            // إذا كان الشهر من 1 إلى 5: الناتج = 1 * السنة الحالية
-            // إذا كان الشهر من 6 إلى 12: الناتج = 6 * السنة الحالية
-            if (month >= 1 && month <= 5) {
-                return (1 * year).toString();
-            } else {
-                return (6 * year).toString();
+        const ApexStorage = {
+            get(key, defaultVal) {
+                const val = localStorage.getItem(key);
+                return val ? JSON.parse(val) : defaultVal;
+            },
+            set(key, val) {
+                localStorage.setItem(key, JSON.stringify(val));
             }
+        };
+
+        const ApexHelpers = {
+            generateId(prefix) { return prefix + '_' + Math.random().toString(36).substr(2, 9); },
+            formatCurrency(amount) { return (parseFloat(amount) || 0).toLocaleString('ar-EG') + ' ج.م'; }
+        };
+
+        const ApexUI = {
+            showToast(msg, type = 'success') { alert(msg); }
+        };
+
+        // الربط العاطفي والتنفيذي للـ App
+        function mainApp() {
+            return {
+                currentTab: 'dashboard',
+                academyName: 'Apex Academy',
+
+                initApp() {
+                    const set = ApexStorage.get(ApexConfig.storageKeys.settings, ApexConfig.defaultSettings);
+                    this.academyName = set.academyName || 'Apex Academy';
+                },
+
+                saveAllData() {
+                    ApexUI.showToast('تم حفظ كافة البيانات والمدخلات بنجاح!');
+                }
+            };
         }
 
-        // التحقق من الإدخال عند الضغط على زر الدخول
-        function handlePasswordSubmit(event) {
-            event.preventDefault();
-            const inputField = document.getElementById('app-password-input');
-            const errorMsg = document.getElementById('password-error-msg');
-            const correctPass = getDynamicPassword();
-
-            if (inputField.value.trim() === correctPass) {
-                // حفظ حالة الدخول في الجلسة الحالية
-                sessionStorage.setItem('apex_auth', 'true');
-                unlockApp();
-            } else {
-                errorMsg.classList.remove('hidden');
-                inputField.value = '';
-                inputField.focus();
-            }
+        // تضمين كافة الوحدات والـ JavaScript Modules المسلمة من قبلك
+        function backupModule() {
+            return {
+                exportData() {
+                    const data = {
+                        students: ApexStorage.get(ApexConfig.storageKeys.students, []),
+                        teachers: ApexStorage.get(ApexConfig.storageKeys.teachers, []),
+                        attendance: ApexStorage.get(ApexConfig.storageKeys.attendance, []),
+                        subscriptions: ApexStorage.get(ApexConfig.storageKeys.subscriptions, []),
+                        finance: ApexStorage.get(ApexConfig.storageKeys.finance, []),
+                        settings: ApexStorage.get(ApexConfig.storageKeys.settings, {})
+                    };
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", `apex_backup_${new Date().toISOString().split('T')[0]}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                    ApexUI.showToast('تم تصدير النسخة الاحتياطية بنجاح', 'success');
+                },
+                importData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsed = JSON.parse(e.target.result);
+                            if (parsed.students) ApexStorage.set(ApexConfig.storageKeys.students, parsed.students);
+                            if (parsed.teachers) ApexStorage.set(ApexConfig.storageKeys.teachers, parsed.teachers);
+                            if (parsed.attendance) ApexStorage.set(ApexConfig.storageKeys.attendance, parsed.attendance);
+                            if (parsed.subscriptions) ApexStorage.set(ApexConfig.storageKeys.subscriptions, parsed.subscriptions);
+                            if (parsed.finance) ApexStorage.set(ApexConfig.storageKeys.finance, parsed.finance);
+                            if (parsed.settings) ApexStorage.set(ApexConfig.storageKeys.settings, parsed.settings);
+                            ApexUI.showToast('تم استعادة البيانات بنجاح!', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                        } catch (err) {
+                            ApexUI.showToast('ملف غير صالح أو تالف', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
         }
 
-        // فتح التطبيق وتأكيد الصلاحية
-        function unlockApp() {
-            document.getElementById('password-overlay').classList.add('hidden');
-            document.getElementById('app-main-content').classList.remove('hidden');
-            
-            // تحميل قسم Dashboard تلقائياً عند الدخول أول مرة
-            if (window.loadModule) {
-                window.loadModule('dashboard');
-            }
+        function settingsModule() {
+            return {
+                settings: { academyName: '', currency: 'ج.م' },
+                initSettings() { this.settings = ApexStorage.get(ApexConfig.storageKeys.settings, ApexConfig.defaultSettings); },
+                saveSettings() {
+                    ApexStorage.set(ApexConfig.storageKeys.settings, this.settings);
+                    ApexUI.showToast('تم حفظ الإعدادات بنجاح', 'success');
+                }
+            };
         }
 
-        // قفل التطبيق عند الضغط على زر الخروج
-        function lockApp() {
-            sessionStorage.removeItem('apex_auth');
-            document.getElementById('password-overlay').classList.remove('hidden');
-            document.getElementById('app-main-content').classList.add('hidden');
-            document.getElementById('app-password-input').value = '';
+        function cardsModule() {
+            return {
+                students: [],
+                selectedStudentId: '',
+                selectedStudent: null,
+                initCards() { this.students = ApexStorage.get(ApexConfig.storageKeys.students, []); },
+                generateCard() {
+                    this.selectedStudent = this.students.find(s => s.id === this.selectedStudentId) || null;
+                    if (this.selectedStudent) {
+                        this.$nextTick(() => {
+                            const qrContainer = document.getElementById('qrcode-container');
+                            if (qrContainer) {
+                                qrContainer.innerHTML = '';
+                                new QRCode(qrContainer, {
+                                    text: this.selectedStudent.code || this.selectedStudent.id,
+                                    width: 50,
+                                    height: 50
+                                });
+                            }
+                        });
+                    }
+                },
+                printCard() { window.print(); }
+            };
         }
 
-        // الفحص التلقائي عند فتح التطبيق
-        window.addEventListener('DOMContentLoaded', () => {
-            if (sessionStorage.getItem('apex_auth') === 'true') {
-                unlockApp();
-            }
-        });
+        function financeModule() {
+            return {
+                financeRecords: [],
+                showModal: false,
+                formData: { type: 'expense', title: '', amount: '' },
+                initFinance() { this.loadFinance(); },
+                loadFinance() { this.financeRecords = ApexStorage.get(ApexConfig.storageKeys.finance, []); },
+                get totalIncome() { return this.financeRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0); },
+                get totalExpense() { return this.financeRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0); },
+                get netProfit() { return this.totalIncome - this.totalExpense; },
+                openAddModal() { this.formData = { type: 'expense', title: '', amount: '' }; this.showModal = true; },
+                saveTransaction() {
+                    const newTransaction = {
+                        id: ApexHelpers.generateId('fin'),
+                        type: this.formData.type,
+                        title: this.formData.title,
+                        amount: parseFloat(this.formData.amount) || 0,
+                        date: new Date().toISOString().split('T')[0],
+                        category: this.formData.type === 'income' ? 'إيرادات عامة' : 'مصروفات عامة'
+                    };
+                    this.financeRecords.push(newTransaction);
+                    ApexStorage.set(ApexConfig.storageKeys.finance, this.financeRecords);
+                    ApexUI.showToast('تم تسجيل المعاملة بنجاح', 'success');
+                    this.showModal = false;
+                },
+                formatCurrency(amount) { return ApexHelpers.formatCurrency(amount); }
+            };
+        }
+
+        function subscriptionsModule() {
+            return {
+                subscriptions: [],
+                students: [],
+                showModal: false,
+                formData: { studentId: '', month: '', amount: '' },
+                initSubscriptions() {
+                    this.students = ApexStorage.get(ApexConfig.storageKeys.students, []);
+                    this.loadSubscriptions();
+                },
+                loadSubscriptions() { this.subscriptions = ApexStorage.get(ApexConfig.storageKeys.subscriptions, []); },
+                getStudentName(studentId) {
+                    const st = this.students.find(s => s.id === studentId);
+                    return st ? st.name : 'طالب غير معروف';
+                },
+                openAddModal() { this.formData = { studentId: '', month: '', amount: '' }; this.showModal = true; },
+                saveSubscription() {
+                    const amountVal = parseFloat(this.formData.amount) || 0;
+                    const newSub = {
+                        id: ApexHelpers.generateId('sub'),
+                        studentId: this.formData.studentId,
+                        month: this.formData.month,
+                        amount: amountVal,
+                        paymentDate: new Date().toISOString().split('T')[0],
+                        status: 'active'
+                    };
+                    this.subscriptions.push(newSub);
+                    ApexStorage.set(ApexConfig.storageKeys.subscriptions, this.subscriptions);
+
+                    let finance = ApexStorage.get(ApexConfig.storageKeys.finance, []);
+                    finance.push({
+                        id: ApexHelpers.generateId('fin'),
+                        type: 'income',
+                        title: 'اشتراك - ' + this.getStudentName(this.formData.studentId) + ' (' + this.formData.month + ')',
+                        amount: amountVal,
+                        date: newSub.paymentDate,
+                        category: 'اشتراكات'
+                    });
+                    ApexStorage.set(ApexConfig.storageKeys.finance, finance);
+
+                    ApexUI.showToast('تم تحصيل الاشتراك وتسجيله بنجاح', 'success');
+                    this.showModal = false;
+                },
+                formatCurrency(amount) { return ApexHelpers.formatCurrency(amount); }
+            };
+        }
+
+        function attendanceModule() {
+            return {
+                students: [],
+                attendanceRecords: [],
+                selectedDate: new Date().toISOString().split('T')[0],
+                searchQuery: '',
+                initAttendance() {
+                    this.students = ApexStorage.get(ApexConfig.storageKeys.students, []);
+                    this.loadAttendance();
+                },
+                loadAttendance() {
+                    const allAttendance = ApexStorage.get(ApexConfig.storageKeys.attendance, []);
+                    this.attendanceRecords = allAttendance.filter(r => r.date === this.selectedDate);
+                },
+                get filteredStudents() {
+                    if (!this.searchQuery) return this.students;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.students.filter(s => s.name.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q)));
+                },
+                getStatus(studentId) {
+                    const rec = this.attendanceRecords.find(r => r.studentId === studentId);
+                    return rec ? rec.status : null;
+                },
+                markStatus(studentId, status) {
+                    let allAttendance = ApexStorage.get(ApexConfig.storageKeys.attendance, []);
+                    const index = allAttendance.findIndex(r => r.studentId === studentId && r.date === this.selectedDate);
+                    if (index !== -1) {
+                        allAttendance[index].status = status;
+                    } else {
+                        allAttendance.push({
+                            id: ApexHelpers.generateId('att'),
+                            studentId: studentId,
+                            date: this.selectedDate,
+                            status: status
+                        });
+                    }
+                    ApexStorage.set(ApexConfig.storageKeys.attendance, allAttendance);
+                    this.loadAttendance();
+                    ApexUI.showToast('تم تسجيل حالة الحضور', 'success');
+                }
+            };
+        }
+
+        function teachersModule() {
+            return {
+                teachers: [],
+                showModal: false,
+                formData: { name: '', subject: '', phone: '', ratio: 80 },
+                initTeachers() { this.loadTeachers(); },
+                loadTeachers() { this.teachers = ApexStorage.get(ApexConfig.storageKeys.teachers, []); },
+                openAddModal() { this.formData = { name: '', subject: '', phone: '', ratio: 80 }; this.showModal = true; },
+                saveTeacher() {
+                    const newTeacher = { id: ApexHelpers.generateId('teacher'), ...this.formData };
+                    this.teachers.push(newTeacher);
+                    ApexStorage.set(ApexConfig.storageKeys.teachers, this.teachers);
+                    ApexUI.showToast('تم إضافة المعلم بنجاح', 'success');
+                    this.showModal = false;
+                },
+                deleteTeacher(id) {
+                    if (confirm('هل أنت تأكد من حذف هذا المعلم؟')) {
+                        this.teachers = this.teachers.filter(t => t.id !== id);
+                        ApexStorage.set(ApexConfig.storageKeys.teachers, this.teachers);
+                        ApexUI.showToast('تم حذف المعلم بنجاح', 'info');
+                    }
+                }
+            };
+        }
+
+        function studentsModule() {
+            return {
+                students: [],
+                searchQuery: '',
+                showModal: false,
+                isEdit: false,
+                formData: { id: null, code: '', name: '', grade: '', phone: '', parentPhone: '' },
+                initStudents() { this.loadStudents(); },
+                loadStudents() { this.students = ApexStorage.get(ApexConfig.storageKeys.students, []); },
+                get filteredStudents() {
+                    if (!this.searchQuery) return this.students;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.students.filter(s => s.name.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q)) || (s.phone && s.phone.includes(q)));
+                },
+                openAddModal() {
+                    this.isEdit = false;
+                    this.formData = { id: null, code: 'STU-' + Math.floor(1000 + Math.random() * 9000), name: '', grade: '', phone: '', parentPhone: '' };
+                    this.showModal = true;
+                },
+                editStudent(student) {
+                    this.isEdit = true;
+                    this.formData = { ...student };
+                    this.showModal = true;
+                },
+                saveStudent() {
+                    if (this.isEdit) {
+                        const index = this.students.findIndex(s => s.id === this.formData.id);
+                        if (index !== -1) this.students[index] = { ...this.formData };
+                    } else {
+                        this.formData.id = ApexHelpers.generateId('student');
+                        this.formData.createdAt = new Date().toISOString().split('T')[0];
+                        this.students.push({ ...this.formData });
+                    }
+                    ApexStorage.set(ApexConfig.storageKeys.students, this.students);
+                    ApexUI.showToast(this.isEdit ? 'تم تعديل بيانات الطالب بنجاح' : 'تم إضافة الطالب بنجاح', 'success');
+                    this.showModal = false;
+                },
+                deleteStudent(id) {
+                    if (confirm('هل أنت تأكد من رغبتك في حذف هذا الطالب؟')) {
+                        this.students = this.students.filter(s => s.id !== id);
+                        ApexStorage.set(ApexConfig.storageKeys.students, this.students);
+                        ApexUI.showToast('تم حذف الطالب بنجاح', 'info');
+                    }
+                }
+            };
+        }
+
+        function dashboardModule() {
+            return {
+                stats: { totalStudents: 0, totalTeachers: 0, activeSubscriptions: 0, totalRevenue: 0 },
+                recentStudents: [],
+                initDashboard() { this.loadStats(); },
+                loadStats() {
+                    const students = ApexStorage.get(ApexConfig.storageKeys.students, []);
+                    const teachers = ApexStorage.get(ApexConfig.storageKeys.teachers, []);
+                    const subscriptions = ApexStorage.get(ApexConfig.storageKeys.subscriptions, []);
+                    const finance = ApexStorage.get(ApexConfig.storageKeys.finance, []);
+
+                    this.stats.totalStudents = students.length;
+                    this.stats.totalTeachers = teachers.length;
+                    this.stats.activeSubscriptions = subscriptions.filter(s => s.status === 'active').length;
+                    this.stats.totalRevenue = finance.reduce((acc, curr) => curr.type === 'income' ? acc + parseFloat(curr.amount || 0) : acc, 0);
+                    this.recentStudents = [...students].reverse().slice(0, 5);
+                },
+                formatCurrency(amount) { return ApexHelpers.formatCurrency(amount); }
+            };
+        }
     </script>
-
-    <!-- 📦 4. استدعاء ملفات الجافاسكريبت الخارجية بالترتيب الصحيح -->
-    <script src="./js/config.js"></script>
-    <script src="./js/storage.js"></script>
-    <script src="./js/helpers.js"></script>
-    <script src="./js/ui.js"></script>
-    <script src="./js/app.js"></script>
 </body>
 </html>

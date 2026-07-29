@@ -1,0 +1,72 @@
+<div x-data="dashboardModule()" x-init="initDashboard()" class="space-y-6">
+    <!-- كروت الإحصائيات السريعة -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400">إجمالي الطلاب</p>
+                <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.totalStudents">0</h3>
+                <span class="inline-block mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-arrow-up text-xs mr-1"></i> نشطين بالنظام</span>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-user-graduate"></i></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400">المعلمين والقائمين</p>
+                <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.totalTeachers">0</h3>
+                <span class="inline-block mt-2 text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">مدرسين معتمدين</span>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-chalkboard-user"></i></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400">اشتراكات سارية</p>
+                <h3 class="text-3xl font-extrabold text-slate-800 mt-1" x-text="stats.activeSubscriptions">0</h3>
+                <span class="inline-block mt-2 text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">هذا الشهر</span>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-id-card"></i></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400">إجمالي الإيرادات</p>
+                <h3 class="text-2xl font-extrabold text-slate-800 mt-1" x-text="formatCurrency(stats.totalRevenue)">0 ج.م</h3>
+                <span class="inline-block mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">صافي المحصل</span>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-wallet"></i></div>
+        </div>
+    </div>
+
+    <!-- جدول أحدث الطلاب المسجلين -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <h4 class="font-bold text-slate-800 text-lg mb-4">أحدث الطلاب المسجلين</h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-sm">
+                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                        <th class="py-3 px-4">الكود</th>
+                        <th class="py-3 px-4">اسم الطالب</th>
+                        <th class="py-3 px-4">الصف الدراسي</th>
+                        <th class="py-3 px-4">رقم الهاتف</th>
+                        <th class="py-3 px-4">تاريخ التسجيل</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-for="student in recentStudents" :key="student.id">
+                        <tr class="hover:bg-slate-50/80 transition-all">
+                            <td class="py-3 px-4 font-mono font-bold text-indigo-600" x-text="student.code"></td>
+                            <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
+                            <td class="py-3 px-4 text-slate-600" x-text="student.grade"></td>
+                            <td class="py-3 px-4 font-mono text-slate-600" x-text="student.phone"></td>
+                            <td class="py-3 px-4 text-slate-400 text-xs" x-text="student.createdAt"></td>
+                        </tr>
+                    </template>
+                    <template x-if="recentStudents.length === 0">
+                        <tr><td colspan="5" class="py-6 text-center text-slate-400">لا توجد بيانات طلاب مسجلة حالياً</td></tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

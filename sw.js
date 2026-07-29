@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-v3';
+const CACHE_NAME = 'apex-v4';
 
 // الملفات الأساسية للتخزين السريع (مسارات مباشرة بدون كلمة assets)
 const INITIAL_ASSETS = [
