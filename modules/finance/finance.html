@@ -1,6 +1,4 @@
 <div x-data="financeModule()" x-init="initFinance()" class="space-y-6">
-
-    <!-- كروت ملخص المالية -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
             <p class="text-xs font-semibold text-slate-400">إجمالي المقبوضات (الإيرادات)</p>
@@ -12,19 +10,17 @@
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
             <p class="text-xs font-semibold text-slate-400">صافي الأرباح</p>
-            <h3 class="text-2xl font-extrabold text-brand-600 mt-1" x-text="formatCurrency(netProfit)">0</h3>
+            <h3 class="text-2xl font-extrabold text-indigo-600 mt-1" x-text="formatCurrency(netProfit)">0</h3>
         </div>
     </div>
 
-    <!-- شريط الإجراءات -->
     <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
         <h3 class="font-bold text-slate-800 text-lg">سجل المعاملات المالية</h3>
-        <button @click="openAddModal()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all">
+        <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all">
             <i class="fa-solid fa-plus ml-1"></i> إضافة معاملة جديدة
         </button>
     </div>
 
-    <!-- جدول الحركات المالية -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-right text-sm">
@@ -40,9 +36,7 @@
                 <tbody class="divide-y divide-slate-100">
                     <template x-for="item in financeRecords" :key="item.id">
                         <tr class="hover:bg-slate-50/80 transition-all">
-                            <td class="py-3 px-4">
-                                <span :class="item.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" class="px-2.5 py-0.5 rounded-full text-xs font-bold" x-text="item.type === 'income' ? 'إيراد' : 'مصروف'"></span>
-                            </td>
+                            <td class="py-3 px-4"><span :class="item.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" class="px-2.5 py-0.5 rounded-full text-xs font-bold" x-text="item.type === 'income' ? 'إيراد' : 'مصروف'"></span></td>
                             <td class="py-3 px-4 font-bold text-slate-800" x-text="item.title"></td>
                             <td class="py-3 px-4 text-slate-600" x-text="item.category || 'عام'"></td>
                             <td class="py-3 px-4 font-mono font-bold" :class="item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'" x-text="formatCurrency(item.amount)"></td>
@@ -54,7 +48,7 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة معاملة -->
+    <!-- Modal -->
     <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
             <h3 class="font-bold text-slate-800 text-lg border-b pb-2">تسجيل معاملة جديدة</h3>
@@ -76,10 +70,9 @@
                 </div>
                 <div class="flex justify-end space-x-reverse space-x-3 pt-3">
                     <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء</button>
-                    <button type="submit" class="px-4 py-2 text-sm text-white bg-brand-600 rounded-xl font-bold">تسجيل المعاملة</button>
+                    <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">تسجيل المعاملة</button>
                 </div>
             </form>
         </div>
     </div>
-
 </div>
