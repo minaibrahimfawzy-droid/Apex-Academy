@@ -1,20 +1,76 @@
 <div x-data="attendanceModule()" class="space-y-6 max-w-2xl mx-auto">
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-        <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالباركود</h3>
+        <h3 class="font-bold text-slate-800 text-center text-base border-b border-slate-100 pb-3">تسجيل الحضور بالباركود والكاميرا الحية</h3>
         
         <div class="flex space-x-reverse space-x-2">
             <input type="text" x-model="studentCode" @keyup.enter="recordAttendance()" placeholder="أدخل كود الطالب يدوياً..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-600">
             <button @click="recordAttendance()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">تسجيل</button>
         </div>
 
-        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-4">
-            <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl mx-auto flex items-center justify-center text-2xl">
-                <i class="fa-solid fa-qrcode"></i>
-            </div>
-            <button @click="alert('جاري تشغيل الكاميرا...')" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center space-x-reverse space-x-2 mx-auto">
+        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center space-y-4">
+            <div id="reader" class="w-full overflow-hidden rounded-xl"></div>
+            <button @click="startCamera()" x-show="!scannerActive" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center space-x-reverse space-x-2 mx-auto">
                 <i class="fa-solid fa-camera"></i>
-                <span>تشغيل الكاميرا للمسح</span>
+                <span>تشغيل الكاميرا للمسح الفعلي</span>
+            </button>
+            <button @click="stopCamera()" x-show="scannerActive" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all mx-auto">
+                إيقاف الكاميرا
             </button>
         </div>
+
+        <div x-show="lastScanResult" :class="lastScanResult?.success ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'" class="p-4 rounded-2xl border space-y-2">
+            <p class="font-bold text-base" x-text="lastScanResult?.message || (lastScanResult?.student?.name + ' - تم تسجيل الحضور بنجاح!')"></p>
+            <template x-if="lastScanResult?.success">
+                <div class="text-xs space-y-1 font-mono pt-2 border-t border-emerald-200/50">
+                    <p>المجموعة: <span class="font-bold" x-text="lastScanResult.student.group"></span></p>
+                    <p>إجمالي المدفوع: <span class="font-bold text-emerald-700" x-text="lastScanResult.totalPaid + ' ج.م'"></span></p>
+                    <p>المتبقي عليه: <span class="font-bold text-rose-600" x-text="lastScanResult.remaining + ' ج.م'"></span></p>
+                </div>
+            </template>
+        </div>
     </div>
+    <script>
+        function attendanceModule() {
+            return {
+                studentCode: '',
+                lastScanResult: null,
+                scannerActive: false,
+                html5QrCode: null,
+                recordAttendance() {
+                    if (!this.studentCode.trim()) return;
+                    let result = Alpine.store('apex').recordAttendanceByCode(this.studentCode.trim());
+                    this.lastScanResult = result;
+                    this.studentCode = '';
+                },
+                startCamera() {
+                    this.scannerActive = true;
+                    this.html5QrCode = new Html5Qrcode("reader");
+                    this.html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            this.studentCode = decodedText;
+                            this.recordAttendance();
+                            this.stopCamera();
+                        },
+                        (errorMessage) => {}
+                    ).catch(err => {
+                        alert('تعذر تشغيل الكاميرا: ' + err);
+                        this.scannerActive = false;
+                    });
+                },
+                stopCamera() {
+                    if (this.html5QrCode && this.scannerActive) {
+                        this.html5QrCode.stop().then(() => {
+                            this.scannerActive = false;
+                        }).catch(err => {
+                            this.scannerActive = false;
+                        });
+                    } else {
+                        this.scannerActive = false;
+                    }
+                }
+            }
+        }
+    </script>
 </div>

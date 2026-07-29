@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apex-v21'; //[cite: 3]
+const CACHE_NAME = 'apex-v25';
 
 // الملفات الأساسية للتخزين السريع[cite: 2]
 const INITIAL_ASSETS = [

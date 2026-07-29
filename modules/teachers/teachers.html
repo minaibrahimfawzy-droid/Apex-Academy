@@ -1,7 +1,7 @@
 <div x-data="teachersModule()" x-init="initTeachers()" class="space-y-6">
     <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
         <h3 class="font-bold text-slate-800 text-lg">قائمة المعلمين المعتمدين</h3>
-        <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-reverse space-x-2">
+        <button @click="showModal = true" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-reverse space-x-2">
             <i class="fa-solid fa-plus"></i>
             <span>إضافة معلم جديد</span>
         </button>
@@ -32,7 +32,6 @@
         </template>
     </div>
 
-    <!-- Modal -->
     <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
             <h3 class="font-bold text-slate-800 text-lg border-b pb-2">إضافة معلم جديد</h3>
@@ -60,4 +59,26 @@
             </form>
         </div>
     </div>
+    <script>
+        function teachersModule() {
+            return {
+                teachers: [],
+                showModal: false,
+                formData: { name: '', subject: '', phone: '', ratio: '' },
+                initTeachers() {
+                    this.teachers = Alpine.store('apex').teachers;
+                },
+                saveTeacher() {
+                    Alpine.store('apex').saveTeacher(this.formData);
+                    this.teachers = Alpine.store('apex').teachers;
+                    this.showModal = false;
+                    this.formData = { name: '', subject: '', phone: '', ratio: '' };
+                },
+                deleteTeacher(id) {
+                    Alpine.store('apex').deleteTeacher(id);
+                    this.teachers = Alpine.store('apex').teachers;
+                }
+            }
+        }
+    </script>
 </div>

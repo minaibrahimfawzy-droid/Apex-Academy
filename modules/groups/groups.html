@@ -1,6 +1,5 @@
 <div x-data="groupsModule()" x-init="initGroups()" class="space-y-6">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- جدول القائمة (يسار) -->
         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
             <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">قائمة المجموعات المسجلة</h3>
             <div class="overflow-x-auto">
@@ -10,7 +9,7 @@
                             <th class="py-3 px-4">اسم المجموعة</th>
                             <th class="py-3 px-4">السنة الدراسية</th>
                             <th class="py-3 px-4">القاعة</th>
-                            <th class="py-3 px-4">المواعيد</th>
+                            <th class="py-3 px-4">الأيام والمواعيد</th>
                             <th class="py-3 px-4">الاشتراك</th>
                             <th class="py-3 px-4 text-center">الإجراءات</th>
                         </tr>
@@ -21,7 +20,9 @@
                                 <td class="py-3 px-4 font-bold text-slate-800" x-text="item.name"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="item.year"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="item.hall"></td>
-                                <td class="py-3 px-4 font-mono text-xs text-indigo-600" x-text="item.schedule"></td>
+                                <td class="py-3 px-4 font-mono text-xs text-indigo-600">
+                                    <span x-text="item.days"></span> | <span x-text="item.time"></span>
+                                </td>
                                 <td class="py-3 px-4 font-mono font-bold text-slate-700" x-text="item.price + ' ج.م'"></td>
                                 <td class="py-3 px-4 text-center">
                                     <button @click="deleteGroup(item.id)" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="حذف"><i class="fa-solid fa-trash"></i></button>
@@ -36,13 +37,12 @@
             </div>
         </div>
 
-        <!-- نموذج الإضافة (يمين) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-5 h-fit">
             <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إضافة مجموعة دراسية</h3>
             <form @submit.prevent="saveGroup" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المجموعة <span class="text-rose-500">*</span></label>
-                    <input type="text" x-model="formData.name" placeholder="مثال: مجموعة أ - السبت" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                    <input type="text" x-model="formData.name" placeholder="مثال: مجموعة أ" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">السنة الدراسية <span class="text-rose-500">*</span></label>
@@ -63,8 +63,27 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">المواعيد</label>
-                    <input type="text" x-model="formData.schedule" placeholder="مثال: سبت وتلات 4 عصراً" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">أيام الأسبوع (من السبت للجمعة) <span class="text-rose-500">*</span></label>
+                    <select x-model="formData.days" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                        <option value="">اختر الأيام...</option>
+                        <option value="السبت والاثنين والأربعاء">السبت والاثنين والأربعاء</option>
+                        <option value="الأحد والثلاثاء والخميس">الأحد والثلاثاء والخميس</option>
+                        <option value="الجمعة والسبت">الجمعة والسبت</option>
+                        <option value="من السبت إلى الخميس">من السبت إلى الخميس</option>
+                        <option value="يوم الجمعة فقط">يوم الجمعة فقط</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">التوقيت الساعي (من 1 إلى 12) <span class="text-rose-500">*</span></label>
+                    <select x-model="formData.time" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                        <option value="">اختر التوقيت...</option>
+                        <option value="01:00 م - 03:00 م">01:00 م - 03:00 م</option>
+                        <option value="03:00 م - 05:00 م">03:00 م - 05:00 م</option>
+                        <option value="05:00 م - 07:00 م">05:00 م - 07:00 م</option>
+                        <option value="07:00 م - 09:00 م">07:00 م - 09:00 م</option>
+                        <option value="09:00 م - 11:00 م">09:00 م - 11:00 م</option>
+                        <option value="10:00 ص - 12:00 م">10:00 ص - 12:00 م</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">سعر الاشتراك (جنيه) <span class="text-rose-500">*</span></label>
@@ -76,4 +95,28 @@
             </form>
         </div>
     </div>
+    <script>
+        function groupsModule() {
+            return {
+                groups: [],
+                availableYears: [],
+                availableHalls: [],
+                formData: { name: '', year: '', hall: '', days: '', time: '', price: '' },
+                initGroups() {
+                    this.groups = Alpine.store('apex').groups;
+                    this.availableYears = Alpine.store('apex').years;
+                    this.availableHalls = Alpine.store('apex').halls;
+                },
+                saveGroup() {
+                    Alpine.store('apex').saveGroup(this.formData);
+                    this.groups = Alpine.store('apex').groups;
+                    this.formData = { name: '', year: '', hall: '', days: '', time: '', price: '' };
+                },
+                deleteGroup(id) {
+                    Alpine.store('apex').deleteGroup(id);
+                    this.groups = Alpine.store('apex').groups;
+                }
+            }
+        }
+    </script>
 </div>

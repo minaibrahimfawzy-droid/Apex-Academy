@@ -1,23 +1,23 @@
 <div x-data="financeModule()" x-init="initFinance()" class="space-y-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-            <p class="text-xs font-semibold text-slate-400">إجمالي المقبوضات (الإيرادات)</p>
+            <p class="text-xs font-semibold text-slate-400">إجمالي المقبوضات (الإيرادات)[cite: 15]</p>
             <h3 class="text-2xl font-extrabold text-emerald-600 mt-1" x-text="formatCurrency(totalIncome)">0</h3>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-            <p class="text-xs font-semibold text-slate-400">إجمالي المصروفات</p>
+            <p class="text-xs font-semibold text-slate-400">إجمالي المصروفات[cite: 15]</p>
             <h3 class="text-2xl font-extrabold text-rose-600 mt-1" x-text="formatCurrency(totalExpense)">0</h3>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-            <p class="text-xs font-semibold text-slate-400">صافي الأرباح</p>
+            <p class="text-xs font-semibold text-slate-400">صافي الأرباح[cite: 15]</p>
             <h3 class="text-2xl font-extrabold text-indigo-600 mt-1" x-text="formatCurrency(netProfit)">0</h3>
         </div>
     </div>
 
     <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-        <h3 class="font-bold text-slate-800 text-lg">سجل المعاملات المالية</h3>
+        <h3 class="font-bold text-slate-800 text-lg">سجل المعاملات المالية[cite: 15]</h3>
         <button @click="openAddModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all">
-            <i class="fa-solid fa-plus ml-1"></i> إضافة معاملة جديدة
+            <i class="fa-solid fa-plus ml-1"></i> إضافة معاملة جديدة[cite: 15]
         </button>
     </div>
 
@@ -26,11 +26,11 @@
             <table class="w-full text-right text-sm">
                 <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                     <tr>
-                        <th class="py-4 px-4">نوع الحركة</th>
-                        <th class="py-4 px-4">التفاصيل / البيان</th>
-                        <th class="py-4 px-4">التصنيف</th>
-                        <th class="py-4 px-4">المبلغ</th>
-                        <th class="py-4 px-4">التاريخ</th>
+                        <th class="py-4 px-4">نوع الحركة[cite: 15]</th>
+                        <th class="py-4 px-4">التفاصيل / البيان[cite: 15]</th>
+                        <th class="py-4 px-4">التصنيف[cite: 15]</th>
+                        <th class="py-4 px-4">المبلغ[cite: 15]</th>
+                        <th class="py-4 px-4">التاريخ[cite: 15]</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -51,26 +51,26 @@
     <!-- Modal -->
     <div x-show="showModal" x-cloak class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4">
-            <h3 class="font-bold text-slate-800 text-lg border-b pb-2">تسجيل معاملة جديدة</h3>
+            <h3 class="font-bold text-slate-800 text-lg border-b pb-2">تسجيل معاملة جديدة[cite: 15]</h3>
             <form @submit.prevent="saveTransaction" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">نوع المعاملة</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">نوع المعاملة[cite: 15]</label>
                     <select x-model="formData.type" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
-                        <option value="income">إيراد (+)</option>
-                        <option value="expense">مصروف (-)</option>
+                        <option value="income">إيراد (+)[cite: 15]</option>
+                        <option value="expense">مصروف (-)[cite: 15]</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">البيان / العنوان</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البيان / العنوان[cite: 15]</label>
                     <input type="text" x-model="formData.title" placeholder="مثال: فاتورة كهرباء / أدوات كتابية" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م)</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م)[cite: 15]</label>
                     <input type="number" x-model="formData.amount" min="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono">
                 </div>
                 <div class="flex justify-end space-x-reverse space-x-3 pt-3">
-                    <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء</button>
-                    <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">تسجيل المعاملة</button>
+                    <button type="button" @click="showModal = false" class="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl font-bold">إلغاء[cite: 15]</button>
+                    <button type="submit" class="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl font-bold">تسجيل المعاملة[cite: 15]</button>
                 </div>
             </form>
         </div>

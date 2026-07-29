@@ -1,22 +1,22 @@
 <div x-data="settingsModule()" x-init="initSettings()" class="space-y-6 max-w-4xl mx-auto">
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إعدادات النظام والمستخدمين</h3>
+        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">إعدادات النظام والمستخدمين[cite: 13]</h3>
         <form @submit.prevent="saveSettings" class="space-y-4">
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم السنتر / المركز التعليمي</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم السنتر / المركز التعليمي[cite: 13]</label>
                 <input type="text" x-model="settings.centerName" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المسؤول / المدير</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المسؤول / المدير[cite: 13]</label>
                 <input type="text" x-model="settings.adminName" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الجديدة</label>
-                <input type="password" x-model="settings.password" placeholder="اتركها فارغة إذا لمגر تغييرها" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الجديدة[cite: 13]</label>
+                <input type="password" x-model="settings.password" placeholder="اتركها فارغة إذا لم يتم تغييرها" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
             </div>
             <div class="pt-2">
                 <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20">
-                    حفظ التغييرات
+                    حفظ التغييرات[cite: 13]
                 </button>
             </div>
         </form>

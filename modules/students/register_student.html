@@ -1,45 +1,55 @@
-<div x-data="registerStudentModule()" x-init="initData()" class="space-y-6">
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6 max-w-4xl mx-auto">
-        <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">تسجيل طالب جديد</h3>
-        <form @submit.prevent="saveStudent" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم الطالب رباعي <span class="text-rose-500">*</span></label>
-                    <input type="text" x-model="formData.name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">السنة الدراسية <span class="text-rose-500">*</span></label>
-                    <select x-model="formData.year" @change="filterGroups()" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
-                        <option value="">اختر السنة...</option>
-                        <template x-for="y in years">
-                            <option :value="y.name" x-text="y.name"></option>
-                        </template>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">هاتف الطالب</label>
-                    <input type="text" x-model="formData.phone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">المجموعة الدراسية <span class="text-rose-500">*</span></label>
-                    <select x-model="formData.group" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
-                        <option value="">اختر المجموعة...</option>
-                        <template x-for="g in filteredGroups">
-                            <option :value="g.name" x-text="g.name"></option>
-                        </template>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">هاتف ولي الأمر</label>
-                    <input type="text" x-model="formData.parentPhone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
-                </div>
+<div x-data="registerModule()" x-init="initRegister()" class="space-y-6 max-w-xl mx-auto">
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+        <h3 class="font-bold text-slate-800 text-base border-b pb-3">تسجيل طالب جديد وتوليد الكود</h3>
+        <form @submit.prevent="register" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالب الرباعي</label>
+                <input type="text" x-model="formData.name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
             </div>
-            <div class="pt-2">
-                <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20 flex items-center space-x-reverse space-x-2">
-                    <i class="fa-solid fa-lock"></i>
-                    <span>حفظ وتسجيل الطالب</span>
-                </button>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">السنة الدراسية</label>
+                <select x-model="formData.year" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                    <option value="">اختر السنة...</option>
+                    <template x-for="y in years"><option :value="y.name" x-text="y.name"></option></template>
+                </select>
             </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">المجموعة</label>
+                <select x-model="formData.group" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
+                    <option value="">اختر المجموعة...</option>
+                    <template x-for="g in groups"><option :value="g.name" x-text="g.name"></option></template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف</label>
+                <input type="text" x-model="formData.phone" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-600">
+            </div>
+            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-md">حفظ وتسجيل الطالب</button>
         </form>
+        <template x-if="lastCreated">
+            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1 text-center font-mono">
+                <p class="font-bold text-emerald-900">تم تسجيل الطالب بنجاح!</p>
+                <p class="text-sm text-emerald-700 font-bold" x-text="'الكود التعريفي: ' + lastCreated.code"></p>
+            </div>
+        </template>
     </div>
+    <script>
+        function registerModule() {
+            return {
+                years: [],
+                groups: [],
+                formData: { name: '', year: '', group: '', phone: '' },
+                lastCreated: null,
+                initRegister() {
+                    this.years = Alpine.store('apex').years;
+                    this.groups = Alpine.store('apex').groups;
+                },
+                register() {
+                    let res = Alpine.store('apex').saveStudent(this.formData);
+                    this.lastCreated = res;
+                    this.formData = { name: '', year: '', group: '', phone: '' };
+                }
+            }
+        }
+    </script>
 </div>

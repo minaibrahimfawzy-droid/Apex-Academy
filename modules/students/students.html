@@ -1,53 +1,58 @@
 <div x-data="studentsModule()" x-init="initStudents()" class="space-y-6">
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-3">
-                <label class="block text-xs font-bold text-slate-700 mb-1">بحث بالاسم أو الكود أو الهاتف</label>
-                <input type="text" x-model="searchQuery" placeholder="اكتب للبحث..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">تصفية بالسنة الدراسية</label>
-                <select x-model="selectedYear" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-600">
-                    <option value="">كل السنوات</option>
-                    <template x-for="y in years">
-                        <option :value="y.name" x-text="y.name"></option>
-                    </template>
-                </select>
-            </div>
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b pb-3">
+            <h3 class="font-bold text-slate-800 text-base">قائمة الطلاب المسجلين</h3>
+            <input type="text" x-model="searchQuery" placeholder="بحث بالاسم أو الكود..." class="px-4 py-2 rounded-xl border border-slate-200 text-sm w-64 focus:outline-none focus:border-indigo-600">
         </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-right text-sm">
-                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
                     <tr>
                         <th class="py-3 px-4">الكود</th>
                         <th class="py-3 px-4">اسم الطالب</th>
                         <th class="py-3 px-4">السنة الدراسية</th>
                         <th class="py-3 px-4">المجموعة</th>
                         <th class="py-3 px-4">الهاتف</th>
-                        <th class="py-3 px-4 text-center">إجراءات</th>
+                        <th class="py-3 px-4 text-center">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <template x-for="student in filteredStudents" :key="student.id">
-                        <tr class="hover:bg-slate-50/80 transition-all">
-                            <td class="py-3 px-4 font-mono text-indigo-600 font-semibold" x-text="student.code"></td>
-                            <td class="py-3 px-4 font-bold text-slate-800" x-text="student.name"></td>
-                            <td class="py-3 px-4 text-slate-600" x-text="student.year"></td>
-                            <td class="py-3 px-4 text-slate-600" x-text="student.group"></td>
-                            <td class="py-3 px-4 font-mono text-slate-600" x-text="student.phone || '-'"></td>
+                    <template x-for="s in filteredStudents" :key="s.id">
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-mono font-bold text-indigo-600" x-text="s.code"></td>
+                            <td class="py-3 px-4 font-bold text-slate-800" x-text="s.name"></td>
+                            <td class="py-3 px-4 text-slate-600" x-text="s.year"></td>
+                            <td class="py-3 px-4 text-slate-600" x-text="s.group"></td>
+                            <td class="py-3 px-4 font-mono text-slate-600" x-text="s.phone || 'غير محدد'"></td>
                             <td class="py-3 px-4 text-center">
-                                <button @click="deleteStudent(student.id)" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                                <button @click="deleteStudent(s.id)" class="text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-all"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     </template>
                     <template x-if="filteredStudents.length === 0">
-                        <tr><td colspan="6" class="py-12 text-center text-slate-400">لا توجد بيانات مطابقة للبحث.</td></tr>
+                        <tr><td colspan="6" class="py-12 text-center text-slate-400">لا توجد نتائج مطابقة.</td></tr>
                     </template>
                 </tbody>
             </table>
         </div>
     </div>
+    <script>
+        function studentsModule() {
+            return {
+                students: [],
+                searchQuery: '',
+                initStudents() {
+                    this.students = Alpine.store('apex').students;
+                },
+                get filteredStudents() {
+                    if (!this.searchQuery) return this.students;
+                    return this.students.filter(s => s.name.includes(this.searchQuery) || s.code.includes(this.searchQuery));
+                },
+                deleteStudent(id) {
+                    Alpine.store('apex').deleteStudent(id);
+                    this.students = Alpine.store('apex').students;
+                }
+            }
+        }
+    </script>
 </div>
