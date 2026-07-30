@@ -1,7 +1,7 @@
 /* ==========================================================================
    1. الثوابت وإعدادات النظام الافتراضية (Constants & Default DB)
    ========================================================================== */
-const APP_VERSION = "115";
+const APP_VERSION = "120";
 
 const STORAGE_KEYS = {
     DB: "apex_academy_db",
@@ -18,8 +18,7 @@ const DEFAULT_DB = {
     halls: [],
     settings: {
         centerName: "أكاديمية أبيكس التعليمية",
-        adminName: "مدير النظام",
-        password: "123"
+        adminName: "مدير النظام"
     },
     archivedYears: [],
     logs: [],
@@ -127,7 +126,7 @@ class ToastManager {
 }
 
 /* ==========================================================================
-   4. إدارة التخزين والتحقق الأمني (Storage & Auth Handlers)
+   4. إدارة التخزين والتحقق الأمني الذكي (Storage & Auth Handlers)
    ========================================================================== */
 class StorageHandler {
     static load() {
@@ -169,13 +168,40 @@ class StorageHandler {
 }
 
 class AuthHandler {
-    static isUnlocked() {
-        return localStorage.getItem(STORAGE_KEYS.SESSION) === 'true';
+    // حساب وتوليد كلمة المرور الحسابية طبقاً للمواصفات البرمجية المطلوبة
+    static getDynamicPassword() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1; // رقم الشهر من 1 إلى 12
+
+        if (month >= 1 && month <= 5) {
+            return String(1 * year); // حاصل ضرب 1 في السنة الحالية
+        } else {
+            return String(6 * year); // حاصل ضرب 6 في السنة الحالية
+        }
     }
 
-    static verify(input, correctPassword) {
-        if (String(input).trim() === String(correctPassword).trim()) {
+    static isUnlocked() {
+        const sessionActive = localStorage.getItem(STORAGE_KEYS.SESSION) === 'true';
+        if (!sessionActive) return false;
+
+        // التحقق من تاريخ فترة التعيين لمنع تجاوز الفترات عند التحول التلقائي للشهر
+        const unlockedPeriod = localStorage.getItem('apex_unlocked_period');
+        const currentPeriod = (new Date().getMonth() + 1) <= 5 ? '1' : '6';
+        if (unlockedPeriod !== currentPeriod) {
+            localStorage.removeItem(STORAGE_KEYS.SESSION);
+            localStorage.removeItem('apex_unlocked_period');
+            return false;
+        }
+        return true;
+    }
+
+    static verify(input) {
+        const correctPassword = AuthHandler.getDynamicPassword();
+        if (String(input).trim() === correctPassword) {
             localStorage.setItem(STORAGE_KEYS.SESSION, 'true');
+            const currentPeriod = (new Date().getMonth() + 1) <= 5 ? '1' : '6';
+            localStorage.setItem('apex_unlocked_period', currentPeriod);
             return true;
         }
         return false;
@@ -183,6 +209,7 @@ class AuthHandler {
 
     static lock() {
         localStorage.removeItem(STORAGE_KEYS.SESSION);
+        localStorage.removeItem('apex_unlocked_period');
     }
 }
 
@@ -623,7 +650,7 @@ window.ApexStore = {
     archiveYearName: "",
     toast: new ToastManager(),
     hasUpdate: false,
-    remoteVersion: "115",
+    remoteVersion: "120",
     globalQuery: "",
     showGlobalSearchResults: false,
     activeStudentDetails: null,
@@ -642,6 +669,30 @@ window.ApexStore = {
     get logs() { return this.db?.logs || []; },
     get cardTemplate() { return this.db?.cardTemplate || null; },
 
+    // ميثود مساعدة لعرض كود المرور النشط حالياً في لوحة التحكم
+    getActivePasswordLabel() {
+        return AuthHandler.getDynamicPassword();
+    },
+
+    // حساب الأيام المتبقية لانتقال الفترة البرمجية التالية تلقائياً
+    getPasswordExpiryDays() {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        let targetDate;
+
+        if (month >= 1 && month <= 5) {
+            // غاية الفترة الأولى هي 31 مايو من نفس السنة
+            targetDate = new Date(currentYear, 4, 31, 23, 59, 59);
+        } else {
+            // غاية الفترة الثانية هي 31 ديسمبر من نفس السنة
+            targetDate = new Date(currentYear, 11, 31, 23, 59, 59);
+        }
+        
+        const diffMs = targetDate.getTime() - now.getTime();
+        return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    },
+
     initApp() {
         this.db = StorageHandler.load();
         this.isUnlocked = AuthHandler.isUnlocked();
@@ -653,14 +704,14 @@ window.ApexStore = {
     },
 
     checkPassword() {
-        const verified = AuthHandler.verify(this.passwordInput, this.db.settings.password);
+        const verified = AuthHandler.verify(this.passwordInput);
         if (verified) {
             this.isUnlocked = true;
             this.passwordError = false;
             this.toast.trigger("success", "تم تسجيل الدخول بنجاح! مرحباً بك.");
         } else {
             this.passwordError = true;
-            this.toast.trigger("error", "رمز التحقق المدخل غير صحيح!");
+            this.toast.trigger("error", "رمز التحقق الدقيق غير مطابق للفترة الزمنية الحالية!");
         }
         this.passwordInput = "";
     },
@@ -681,7 +732,7 @@ window.ApexStore = {
     getBackupInfo() {
         return {
             date: Helpers.getLocalDate(),
-            version: "115",
+            version: "120",
             size: StorageHandler.calculateStats(),
             recordsCount: this.students.length + this.payments.length + this.attendance.length
         };
@@ -964,10 +1015,10 @@ window.ApexStore = {
    7. تهيئة وإطلاق تطبيق جافا سكريبت (Application Initializer)
    ========================================================================== */
 document.addEventListener('alpine:init', () => {
-    // تسجيل مخزن الحالة بشكل مباشر ليعمل مع Alpine.js
+    // تسجيل المتجر البرمجي للتطبيق بشكل فوري ومباشر
     Alpine.store('apex', window.ApexStore);
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-    console.log("Apex Academy Engine Core v115 Standalone Initialized successfully.");
+    console.log("Apex Academy Engine Core v120 Standalone Initialized successfully.");
 });
