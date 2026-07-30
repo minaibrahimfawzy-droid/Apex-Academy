@@ -1,0 +1,32 @@
+/* ===== dashboard.css - لوحة التحكم ===== */
+.stat-card {
+    background: #fff;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.bar-chart-bar {
+    transition: height 0.4s ease;
+    border-radius: 3px 3px 0 0;
+}
+
+.progress-bar {
+    height: 8px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+}

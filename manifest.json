@@ -1,10 +1,12 @@
 {
-  "name": "نظام إدارة السنتر التعليمي",
-  "short_name": "Apex Center",
+  "name": "أكاديمية أبيكس - نظام إدارة السنتر التعليمي",
+  "short_name": "Apex Academy",
+  "version": "115",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#4f46e5",
+  "description": "النظام المتكامل لإدارة السنتر التعليمي - v115",
   "icons": [
     {
       "src": "images/logo.png",

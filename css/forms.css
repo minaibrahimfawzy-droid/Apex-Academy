@@ -1,9 +1,74 @@
-/* Styling place-holders for custom component overrides, form focus styles, and smooth transitions */
-.btn-primary {
-    background-color: #4f46e5;
-    color: #ffffff;
-    transition: all 0.2s ease-in-out;
+/* ===== forms.css - نماذج الإدخال ===== */
+.apex-input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font-family: 'Cairo', sans-serif;
+    font-size: 12px;
+    transition: border-color 0.2s;
+    outline: none;
 }
-.btn-primary:hover {
-    background-color: #4338ca;
+
+.apex-input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
 }
+
+.apex-select {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font-family: 'Cairo', sans-serif;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.apex-select:focus {
+    border-color: #4f46e5;
+}
+
+.apex-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.75rem;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    outline: none;
+}
+
+.apex-btn-primary {
+    background: #4f46e5;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+}
+
+.apex-btn-primary:hover { background: #4338ca; }
+
+.apex-btn-success {
+    background: #059669;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(5,150,105,0.25);
+}
+
+.apex-btn-success:hover { background: #047857; }
+
+.apex-btn-danger {
+    background: #e11d48;
+    color: #fff;
+}
+
+.apex-btn-danger:hover { background: #be123c; }
+
+.apex-btn-ghost {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.apex-btn-ghost:hover { background: #e2e8f0; }

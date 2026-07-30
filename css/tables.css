@@ -1,9 +1,56 @@
-/* Styling place-holders for custom component overrides, form focus styles, and smooth transitions */
-.btn-primary {
-    background-color: #4f46e5;
-    color: #ffffff;
-    transition: all 0.2s ease-in-out;
+/* ===== tables.css - الجداول ===== */
+.apex-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+    font-size: 12px;
 }
-.btn-primary:hover {
-    background-color: #4338ca;
+
+.apex-table thead {
+    background: #f8fafc;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
 }
+
+.apex-table thead th {
+    padding: 1rem;
+    font-weight: 700;
+}
+
+.apex-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.apex-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.apex-table tbody td {
+    padding: 0.75rem 1rem;
+}
+
+.apex-table .col-actions {
+    text-align: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 0.5rem;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: none;
+    font-family: 'Cairo', sans-serif;
+}
+
+.action-btn-view  { color: #4f46e5; background: #eef2ff; }
+.action-btn-view:hover  { background: #e0e7ff; }
+.action-btn-edit  { color: #059669; background: #ecfdf5; }
+.action-btn-edit:hover  { background: #d1fae5; }
+.action-btn-del   { color: #e11d48; background: #fff1f2; }
+.action-btn-del:hover   { background: #ffe4e6; }

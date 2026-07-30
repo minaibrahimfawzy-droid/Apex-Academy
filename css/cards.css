@@ -1,10 +1,47 @@
+/* ===== cards.css - كارنيهات الطلاب ===== */
 .student-card {
-    width: 3.375in;
-    height: 2.125in;
+    width: 85mm;
+    height: 55mm;
     background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);
     color: white;
     position: relative;
     overflow: hidden;
     border-radius: 0.75rem;
     box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.2);
+    font-family: 'Cairo', sans-serif;
+    direction: rtl;
+    box-sizing: border-box;
+    padding: 15px;
+}
+
+.student-card .card-name {
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+}
+
+.student-card .card-info {
+    font-size: 10px;
+    opacity: 0.9;
+    margin: 2px 0;
+}
+
+.student-card .card-code {
+    font-family: monospace;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.card-preview-wrap {
+    width: 340px;
+    height: 210px;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+/* طباعة الكارنيهات */
+@media print {
+    .card-item { page-break-inside: avoid; }
+    .no-print { display: none !important; }
 }

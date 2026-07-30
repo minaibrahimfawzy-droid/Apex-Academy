@@ -1,24 +1,20 @@
-.print-only { 
-    display: none; 
+/* ===== print.css - الطباعة ===== */
+.print-only {
+    display: none;
 }
 
 @media print {
-    body * { 
-        visibility: hidden; 
+    body * { visibility: hidden; }
+    .print-area, .print-area * { visibility: visible; }
+    .print-area {
+        position: absolute;
+        left: 0; top: 0;
+        width: 100%;
     }
-    .print-area, .print-area * { 
-        visibility: visible; 
-    }
-    .print-area { 
-        position: absolute; 
-        left: 0; 
-        top: 0; 
-        width: 100%; 
-    }
-    .no-print { 
-        display: none !important; 
-    }
-    .print-only { 
-        display: block; 
-    }
+    .no-print { display: none !important; }
+    .print-only { display: block; }
+
+    nav, header, footer { display: none !important; }
+
+    .card-item { page-break-inside: avoid; }
 }

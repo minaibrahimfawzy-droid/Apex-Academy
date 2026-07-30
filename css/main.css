@@ -1,24 +1,32 @@
-body { 
-    font-family: 'Cairo', sans-serif; 
-    background-color: #f8fafc; 
+/* ===== main.css - الأنماط الأساسية ===== */
+body {
+    font-family: 'Cairo', sans-serif;
+    background-color: #f8fafc;
 }
 
-/* Chrome, Safari, Edge Scrollbars */
-::-webkit-scrollbar { 
-    width: 6px; 
-    height: 6px; 
-}
-::-webkit-scrollbar-track { 
-    background: #f1f5f9; 
-}
-::-webkit-scrollbar-thumb { 
-    background: #cbd5e1; 
-    border-radius: 3px; 
-}
-::-webkit-scrollbar-thumb:hover { 
-    background: #94a3b8; 
+[x-cloak] {
+    display: none !important;
 }
 
-[x-cloak] { 
-    display: none !important; 
+/* ===== شريط التمرير ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ===== أنماط مشتركة ===== */
+.apex-card {
+    background: #fff;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.apex-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
 }
