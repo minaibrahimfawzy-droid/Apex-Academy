@@ -1,59 +1,41 @@
-/**
- * attendance/attendance-service.js - منطق تسجيل الحضور
- */
-import { todayAr, nowTimeAr, generateId } from '../../core/helpers.js';
-import { getStudentStats } from '../students/crud.js';
-import { syncStorage } from '../../core/storage.js';
+class AttendanceService {
+    static record(db, code) {
+        const student = db.students.find(s => String(s.code).trim() === String(code).trim());
+        if (!student) {
+            return { success: false, message: "كود الطالب غير مسجل بالنظام ❌" };
+        }
 
-/**
- * تسجيل حضور طالب عبر الكود أو الاسم
- * @param {object} store - Alpine store
- * @param {string} code - كود الطالب أو اسمه
- * @returns {object} نتيجة العملية
- */
-export function recordAttendanceByCode(store, code) {
-    const cleanCode = (code || '').trim();
-    if (!cleanCode) return { success: false, message: 'الرجاء إدخال كود الطالب!' };
+        const today = window.Helpers.getLocalDate();
+        const alreadyPresent = db.attendance.some(a => a.studentId === student.id && a.date === today);
 
-    const student = store.students.find(
-        s => s.code === cleanCode || (s.name && s.name.trim() === cleanCode)
-    );
-    if (!student) return { success: false, message: 'الطالب غير مسجل بأكاديمية أبيكس!' };
+        if (alreadyPresent) {
+            const firstAtt = db.attendance.find(a => a.studentId === student.id && a.date === today);
+            return {
+                success: false,
+                message: `الطالب مسجل حضور بالفعل اليوم! ⚠️ (وقت الحضور: ${firstAtt.time})`,
+                student,
+                remaining: window.StudentStats.getStats(db, student.id).remaining
+            };
+        }
 
-    const todayStr       = todayAr();
-    const existingRecord = store.attendance.find(
-        a => a.studentId === student.id && a.date === todayStr
-    );
+        const newRecord = {
+            id: window.Helpers.generateID(),
+            studentId: student.id,
+            name: student.name,
+            group: student.group,
+            date: today,
+            time: window.Helpers.getLocalTime()
+        };
+        db.attendance.push(newRecord);
 
-    if (existingRecord) {
+        const stats = window.StudentStats.getStats(db, student.id);
         return {
-            success:          false,
-            alreadyRegistered:true,
-            message:          'تم تسجيل حضوره بالفعل اليوم!',
+            success: true,
+            message: `تم إثبات حضور الطالب بنجاح ✅ (وقت الحضور: ${newRecord.time})`,
             student,
-            time:             existingRecord.time,
+            remaining: stats.remaining,
+            time: newRecord.time
         };
     }
-
-    const stats  = getStudentStats(student, store.payments);
-    const record = {
-        id:        generateId(),
-        studentId: student.id,
-        code:      student.code,
-        name:      student.name,
-        group:     student.group,
-        date:      todayStr,
-        time:      nowTimeAr(),
-    };
-
-    store.attendance.unshift(record);
-    syncStorage(store);
-
-    return {
-        success:    true,
-        student,
-        totalPaid:  stats.paid,
-        remaining:  stats.remaining,
-        time:       record.time,
-    };
 }
+window.AttendanceService = AttendanceService;

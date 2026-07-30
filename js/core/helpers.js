@@ -1,206 +1,75 @@
-/**
- * helpers.js - الدوال المساعدة المشتركة
- */
-import { STUDENT_CODE_PREFIX, STUDENT_CODE_PADDING, STUDENT_CODE_START, QR_DELAY } from './constants.js';
+class Helpers {
+    static formatCurrency(val) {
+        return Number(val || 0).toLocaleString('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 0 }).replace('EGP', 'ج.م');
+    }
 
-// ===========================
-// QR Code
-// ===========================
+    static getLocalDate() {
+        const date = new Date();
+        return date.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
 
-/**
- * توليد QR Code داخل عنصر HTML
- * @param {string} containerId - معرّف العنصر
- * @param {string} code - النص المراد تحويله
- * @param {number} [width=80] - العرض
- * @param {number} [height=80] - الارتفاع
- */
-export function generateQR(containerId, code, width = 80, height = 80) {
-    setTimeout(() => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.innerHTML = '';
-        try {
-            new QRCode(container, { text: code, width, height });
-        } catch (e) {
-            console.error('QR generation error:', e);
-        }
-    }, QR_DELAY);
+    static getLocalTime() {
+        const date = new Date();
+        return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    static generateID() {
+        return Date.now() + Math.floor(Math.random() * 1000);
+    }
+
+    static generateStudentCode(yearName) {
+        const cleanYear = String(yearName || "STUD").replace(/\s+/g, '').substring(0, 4).toUpperCase();
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        return `${cleanYear}-${rand}`;
+    }
+
+    static exportCSV(data, filename, headers) {
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += headers.join(",") + "\n";
+        data.forEach(row => {
+            csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(",") + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${filename}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    static printTable(title, headers, rows) {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        const headerCells = headers.map(h => `<th style="padding:12px; border:1px solid #cbd5e1; background-color:#f1f5f9; font-weight:700;">${h}</th>`).join('');
+        const rowCells = rows.map(r => `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                ${r.map(cell => `<td style="padding:10px; border:1px solid #cbd5e1; text-align:right;">${cell}</td>`).join('')}
+            </tr>
+        `).join('');
+
+        printWindow.document.write(`
+            <html dir="rtl" lang="ar">
+            <head>
+                <title>${title}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Cairo', sans-serif; padding: 20px; color: #1e293b; background: #fff; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+                    h2 { text-align: center; font-size: 18px; margin-bottom: 10px; }
+                </style>
+            </head>
+            <body onload="window.print(); window.close();">
+                <h2>${title}</h2>
+                <p style="text-align:center; font-size:11px; color:#64748b;">تاريخ التوليد: ${Helpers.getLocalDate()} ${Helpers.getLocalTime()}</p>
+                <table>
+                    <thead><tr>${headerCells}</tr></thead>
+                    <tbody>${rowCells}</tbody>
+                </table>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
 }
-
-// ===========================
-// كود الطالب
-// ===========================
-
-/**
- * توليد الكود التسلسلي التالي للطالب
- * @param {Array} students - مصفوفة الطلاب
- * @returns {string}
- */
-export function generateNextStudentCode(students) {
-    const maxNum = students.reduce((max, s) => {
-        const m = s.code ? s.code.match(/APEX-(\d+)/) : null;
-        if (m) {
-            const n = parseInt(m[1], 10);
-            return n > max ? n : max;
-        }
-        return max;
-    }, STUDENT_CODE_START);
-
-    return STUDENT_CODE_PREFIX + String(maxNum + 1).padStart(STUDENT_CODE_PADDING, '0');
-}
-
-// ===========================
-// CSV
-// ===========================
-
-/**
- * تصدير البيانات كملف CSV مع دعم العربية
- * @param {Array} data - صفوف البيانات
- * @param {string} filename - اسم الملف
- * @param {Array<string>} headers - رؤوس الأعمدة
- */
-export function exportToCSV(data, filename, headers) {
-    let csv = '\uFEFF' + headers.join(',') + '\n';
-
-    csv += data.map(row =>
-        row.map(val => {
-            let s = String(val ?? '').replace(/"/g, '""');
-            return (s.includes(',') || s.includes('\n')) ? `"${s}"` : s;
-        }).join(',')
-    ).join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    downloadBlob(blob, `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
-}
-
-// ===========================
-// طباعة
-// ===========================
-
-/**
- * طباعة جدول في نافذة جديدة
- * @param {string} title - عنوان التقرير
- * @param {Array<string>} headers - رؤوس الجدول
- * @param {Array<Array>} rows - صفوف البيانات
- */
-export function printTable(title, headers, rows) {
-    const win = window.open('', '_blank');
-    if (!win) return;
-
-    const thCells  = headers.map(h => `<th style="padding:10px;border:1px solid #cbd5e1;">${h}</th>`).join('');
-    const trCells  = rows.map(row =>
-        `<tr>${row.map(c => `<td style="padding:10px;border:1px solid #e2e8f0;">${c}</td>`).join('')}</tr>`
-    ).join('');
-
-    win.document.write(`<!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <title>${title}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-            body{font-family:'Cairo',sans-serif;padding:20px;direction:rtl;}
-            h1{text-align:center;color:#1e293b;font-size:20px;}
-            table{width:100%;border-collapse:collapse;margin-top:20px;direction:rtl;text-align:right;}
-            thead tr{background:#f1f5f9;border-bottom:2px solid #cbd5e1;}
-            .footer{text-align:center;margin-top:30px;font-size:11px;color:#64748b;}
-        </style>
-    </head><body>
-        <h1>أكاديمية أبيكس - ${title}</h1>
-        <table><thead><tr>${thCells}</tr></thead><tbody>${trCells}</tbody></table>
-        <div class="footer">تم التوليد بواسطة نظام أبيكس لإدارة السنتر التعليمي - v115</div>
-        <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};<\/script>
-    </body></html>`);
-    win.document.close();
-}
-
-// ===========================
-// تحميل الملفات
-// ===========================
-
-/**
- * تحميل Blob كملف
- * @param {Blob} blob
- * @param {string} filename
- */
-export function downloadBlob(blob, filename) {
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href  = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-/**
- * تحميل نص كملف JSON
- * @param {string} content - محتوى JSON
- * @param {string} filename - اسم الملف
- */
-export function downloadJSON(content, filename) {
-    const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
-    downloadBlob(blob, filename);
-}
-
-// ===========================
-// التاريخ والوقت
-// ===========================
-
-/**
- * تاريخ اليوم بالعربية
- * @returns {string}
- */
-export function todayAr() {
-    return new Date().toLocaleDateString('ar-EG');
-}
-
-/**
- * وقت الآن بالعربية (ساعة:دقيقة)
- * @returns {string}
- */
-export function nowTimeAr() {
-    return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-}
-
-// ===========================
-// Debounce
-// ===========================
-
-/**
- * تأخير تنفيذ الدالة
- * @param {Function} fn
- * @param {number} [delay=300]
- * @returns {Function}
- */
-export function debounce(fn, delay = 300) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn(...args), delay);
-    };
-}
-
-// ===========================
-// تنسيق العملة
-// ===========================
-
-/**
- * تنسيق المبلغ بالجنيه المصري
- * @param {number} amount
- * @returns {string}
- */
-export function formatCurrency(amount) {
-    return `${Number(amount).toLocaleString('ar-EG')} ج.م`;
-}
-
-// ===========================
-// ID عشوائي
-// ===========================
-
-/**
- * توليد ID فريد بناءً على الوقت
- * @returns {number}
- */
-export function generateId() {
-    return Date.now();
-}
+window.Helpers = Helpers;

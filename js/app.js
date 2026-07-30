@@ -1,13 +1,8 @@
-/**
- * app.js - نقطة انطلاق أكاديمية أبيكس v115
- * المسؤولية: تهيئة Alpine وتسجيل الـ Store فقط
- */
-import { initStore } from './store.js';
-
-/**
- * تهيئة التطبيق الكاملة
- * يُستدعى تلقائياً عند جاهزية Alpine
- */
 document.addEventListener('alpine:init', () => {
-    initStore();
+    // تسجيل المتجر البرمجي للتطبيق بشكل فوري ومباشر
+    Alpine.store('apex', window.ApexStore);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("Apex Academy Engine Core v115 Initialized successfully.");
 });
