@@ -21,7 +21,7 @@
     <!-- Html5QrcodeScanner -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
-    <!-- أنماط CSS -->
+    <!-- استدعاء ملفات التنسيق -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/forms.css">
@@ -31,17 +31,25 @@
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/print.css">
 
-    <!-- تطبيق أبيكس (ES Module) -->
-    <script type="module" src="js/app.js"></script>
-    <!-- Alpine.js (يُحمَّل بعد app.js لضمان تسجيل الأحداث) -->
+    <!-- تطبيق أبيكس الموحد المقاوم للتعليق البرمجي أوفلاين -->
+    <script src="app.js" defer></script>
+    
+    <!-- مكتبة Alpine.js لبناء التفاعل والواجهة -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50%       { transform: scale(1.3); opacity: 0.7; }
+        }
+        .animate-pulse-dot { animation: pulse-dot 1.5s infinite; }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-semibold"
       x-data x-init="$store.apex.initApp()">
 
-<!-- ════════════════════════════════════════════════════════════
-     1. شاشة تسجيل الدخول
-════════════════════════════════════════════════════════════ -->
+<!-- 1. شاشة تسجيل الدخول -->
 <div x-show="!$store.apex.isUnlocked"
      class="fixed inset-0 bg-slate-950/90 z-[999999] flex items-center justify-center p-4 backdrop-blur-md"
      x-cloak>
@@ -73,9 +81,7 @@
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════
-     2. نافذة ترحيل الأرشيف السنوي
-════════════════════════════════════════════════════════════ -->
+<!-- 2. نافذة ترحيل الأرشيف السنوي -->
 <div x-show="$store.apex.showArchiveModal"
      class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
      x-cloak>
@@ -102,9 +108,7 @@
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════
-     3. شريط Toast
-════════════════════════════════════════════════════════════ -->
+<!-- 3. شريط Toast -->
 <div x-show="$store.apex.toast.show"
      class="fixed bottom-6 right-6 z-[99999] p-4 rounded-2xl shadow-xl flex items-center gap-3 border text-xs max-w-sm animate-slide-up"
      :class="{
@@ -124,9 +128,7 @@
     <span x-text="$store.apex.toast.message"></span>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════
-     4. شريط التحديثات
-════════════════════════════════════════════════════════════ -->
+<!-- 4. شريط التحديثات -->
 <template x-if="$store.apex.hasUpdate">
     <div class="bg-rose-600 text-white px-4 py-3 text-xs font-bold text-center flex justify-center items-center gap-3 shadow-md z-50">
         <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse-dot"></span>
@@ -138,9 +140,6 @@
     </div>
 </template>
 
-<!-- ════════════════════════════════════════════════════════════
-     الهيكل الرئيسي
-════════════════════════════════════════════════════════════ -->
 <div class="min-h-screen flex flex-col">
 
     <!-- الهيدر -->
@@ -279,12 +278,8 @@
     <!-- المحتوى الرئيسي -->
     <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
 
-        <!-- ══════════════════════════════════════════════════════════
-             1. الرئيسية / لوحة التحكم
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 1. الرئيسية / لوحة التحكم -->
         <div x-show="$store.apex.currentTab === 'home'" class="space-y-6" x-cloak>
-
-            <!-- إحصائيات سريعة -->
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
                     <p class="text-[10px] text-slate-400">الطلاب</p>
@@ -320,7 +315,6 @@
                 </div>
             </div>
 
-            <!-- الرسوم البيانية -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- حضور آخر 7 أيام -->
                 <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
@@ -350,15 +344,12 @@
                                 <div class="flex justify-between">
                                     <span class="font-bold text-slate-700" x-text="h.name"></span>
                                     <span class="text-slate-400 font-mono text-[10px]"
-                                          x-text="h.count + ' طالب / ' + h.capacity + ' سعة'"></span>
+                                          x-text="h.count + ' مجموعة / ' + h.capacity + ' سعة'"></span>
                                 </div>
                                 <div class="progress-bar">
                                     <div class="bg-emerald-500 progress-fill" :style="'width: ' + h.pct + '%'"></div>
                                 </div>
                             </div>
-                        </template>
-                        <template x-if="$store.apex.hallOccupancy.length === 0">
-                            <p class="text-[11px] text-slate-400 text-center py-3">لا توجد قاعات مسجلة</p>
                         </template>
                     </div>
                 </div>
@@ -388,7 +379,7 @@
                         </div>
                     </div>
 
-                    <!-- السجل الأخير -->
+                    <!-- Sجلات العمليات الأخيرة -->
                     <div class="space-y-2">
                         <p class="font-bold text-slate-500 text-[10px]">
                             <i class="fa-solid fa-receipt text-indigo-500"></i> العمليات والتحركات الأخيرة:
@@ -407,9 +398,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             2. الطلاب والتحكم
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 2. الطلاب والتحكم -->
         <div x-show="$store.apex.currentTab === 'students'"
              x-data="{ search: '', filterYear: '', filterGroup: '', filterLate: 'all' }"
              class="space-y-4" x-cloak>
@@ -535,7 +524,7 @@
                 </table>
             </div>
 
-            <!-- نافذة تفاصيل الطالب -->
+            <!-- نافذة تفاصيل الطالب المفتوحة -->
             <div x-show="$store.apex.activeStudentDetails"
                  class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
                  x-cloak>
@@ -600,9 +589,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             3. تسجيل طالب جديد / تعديل
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 3. تسجيل طالب جديد / تعديل -->
         <div x-show="$store.apex.currentTab === 'register'" class="space-y-4" x-cloak>
             <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4"
                  x-data="{
@@ -716,9 +703,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             4. الحضور والكاميرا
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 4. الحضور والكاميرا -->
         <div x-show="$store.apex.currentTab === 'attendance'"
              x-data="{
                  codeInput: '', scanResult: null, scanner: null, isScanning: false,
@@ -824,9 +809,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             5. المجموعات
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 5. المجموعات -->
         <div x-show="$store.apex.currentTab === 'groups'"
              x-data="{ name:'', year:'', price:'', hallId:'', teacherId:'', editId: null }"
              class="space-y-6" x-cloak>
@@ -910,9 +893,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             6. التحصيل والمالية
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 6. التحصيل والرسوم -->
         <div x-show="$store.apex.currentTab === 'accounts'"
              x-data="{ studentId:'', amount:'', month:'' }"
              class="space-y-6" x-cloak>
@@ -979,9 +960,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             7. المعلمين
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 7. المعلمين -->
         <div x-show="$store.apex.currentTab === 'teachers'"
              x-data="{ name:'', subject:'', phone:'', editId: null }"
              class="space-y-6" x-cloak>
@@ -1039,9 +1018,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             8. القاعات
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 8. القاعات -->
         <div x-show="$store.apex.currentTab === 'halls'"
              x-data="{ name:'', capacity:'', editId: null }"
              class="space-y-6" x-cloak>
@@ -1103,9 +1080,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             9. السنوات الدراسية
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 9. السنوات الدراسية -->
         <div x-show="$store.apex.currentTab === 'years'"
              x-data="{ name:'', editId: null }"
              class="space-y-6" x-cloak>
@@ -1188,9 +1163,7 @@
             </template>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             10. الكارنيهات
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 10. الكارنيهات -->
         <div x-show="$store.apex.currentTab === 'cards'"
              x-data="{
                  studentId: '',
@@ -1205,7 +1178,6 @@
                     <button @click="
                         const { printAllCards } = window._apexCards || {};
                         if (printAllCards) printAllCards($store.apex.students, $store.apex.cardTemplate);
-                        else import('./js/modules/cards/cards.js').then(m => m.printAllCards($store.apex.students, $store.apex.cardTemplate));
                     " class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md">
                         <i class="fa-solid fa-print ml-1"></i> طباعة كافة الكارنيهات
                     </button>
@@ -1233,7 +1205,7 @@
                 <div class="space-y-2 text-xs">
                     <label class="block font-bold text-slate-600">اختر الطالب لمعاينة الكارنيه:</label>
                     <select x-model="studentId"
-                            @change="const st = getSelectedStudent(); if(st) { const { generateCardQR } = window._apexCards || {}; if(generateCardQR) generateCardQR(st.code); else import('./js/modules/cards/cards.js').then(m => m.generateCardQR(st.code)); }"
+                            @change="const st = getSelectedStudent(); if(st) { const { generateCardQR } = window._apexCards || {}; if(generateCardQR) generateCardQR(st.code); }"
                             class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
                         <option value="">اختر الطالب...</option>
                         <template x-for="st in $store.apex.students" :key="st.id">
@@ -1251,7 +1223,6 @@
                                 const st = getSelectedStudent();
                                 const { downloadSingleCard } = window._apexCards || {};
                                 if(downloadSingleCard) downloadSingleCard(st);
-                                else import('./js/modules/cards/cards.js').then(m => m.downloadSingleCard(st));
                             " class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md">
                                 <i class="fa-solid fa-file-pdf ml-1"></i> تحميل PDF
                             </button>
@@ -1283,9 +1254,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════
-             11. النسخ الاحتياطي
-        ══════════════════════════════════════════════════════════ -->
+        <!-- 11. النسخ الاحتياطي -->
         <div x-show="$store.apex.currentTab === 'backup'" class="space-y-6" x-cloak>
             <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-6 text-center">
                 <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-3xl font-bold">
@@ -1324,14 +1293,7 @@
             </div>
         </div>
 
-    </main><!-- /main -->
-</div><!-- /min-h-screen -->
-
-<!-- تعريض وظائف الكارنيهات للـ window للاستخدام من HTML -->
-<script type="module">
-    import { printAllCards, generateCardQR, downloadSingleCard } from './js/modules/cards/cards.js';
-    window._apexCards = { printAllCards, generateCardQR, downloadSingleCard };
-</script>
-
+    </main>
+</div>
 </body>
 </html>
