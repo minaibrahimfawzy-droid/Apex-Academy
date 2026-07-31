@@ -1,1024 +1,916 @@
-/* ==========================================================================
-   1. الثوابت وإعدادات النظام الافتراضية (Constants & Default DB)
-   ========================================================================== */
-const APP_VERSION = "120";
-
-const STORAGE_KEYS = {
-    DB: "apex_academy_db",
-    SESSION: "apex_academy_session"
-};
-
-const DEFAULT_DB = {
-    students: [],
-    teachers: [],
-    attendance: [],
-    payments: [],
-    groups: [],
-    years: [],
-    halls: [],
-    settings: {
-        centerName: "أكاديمية أبيكس التعليمية",
-        adminName: "مدير النظام"
-    },
-    archivedYears: [],
-    logs: [],
-    cardTemplate: null
-};
-
-/* ==========================================================================
-   2. الدوال المساعدة العامة (Helpers)
-   ========================================================================== */
-class Helpers {
-    static formatCurrency(val) {
-        return Number(val || 0).toLocaleString('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 0 }).replace('EGP', 'ج.م');
-    }
-
-    static getLocalDate() {
-        const date = new Date();
-        return date.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    }
-
-    static getLocalTime() {
-        const date = new Date();
-        return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-
-    static generateID() {
-        return Date.now() + Math.floor(Math.random() * 1000);
-    }
-
-    static generateStudentCode(yearName) {
-        const cleanYear = String(yearName || "STUD").replace(/\s+/g, '').substring(0, 4).toUpperCase();
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        return `${cleanYear}-${rand}`;
-    }
-
-    static exportCSV(data, filename, headers) {
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-        csvContent += headers.join(",") + "\n";
-        data.forEach(row => {
-            csvContent += row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(",") + "\n";
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `${filename}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    static printTable(title, headers, rows) {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-        const headerCells = headers.map(h => `<th style="padding:12px; border:1px solid #cbd5e1; background-color:#f1f5f9; font-weight:700;">${h}</th>`).join('');
-        const rowCells = rows.map(r => `
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                ${r.map(cell => `<td style="padding:10px; border:1px solid #cbd5e1; text-align:right;">${cell}</td>`).join('')}
-            </tr>
-        `).join('');
-
-        printWindow.document.write(`
-            <html dir="rtl" lang="ar">
-            <head>
-                <title>${title}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; padding: 20px; color: #1e293b; background: #fff; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-                    h2 { text-align: center; font-size: 18px; margin-bottom: 10px; }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                <h2>${title}</h2>
-                <p style="text-align:center; font-size:11px; color:#64748b;">تاريخ التوليد: ${Helpers.getLocalDate()} ${Helpers.getLocalTime()}</p>
-                <table>
-                    <thead><tr>${headerCells}</tr></thead>
-                    <tbody>${rowCells}</tbody>
-                </table>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
-    }
-}
-
-/* ==========================================================================
-   3. نظام الإشعارات الفوري (Toast Manager)
-   ========================================================================== */
-class ToastManager {
-    constructor() {
-        this.show = false;
-        this.type = 'success';
-        this.message = '';
-        this.timeout = null;
-    }
-
-    trigger(type, message) {
-        this.show = true;
-        this.type = type;
-        this.message = message;
-        if (this.timeout) clearTimeout(this.timeout);
-        this.timeout = setTimeout(() => {
-            this.show = false;
-        }, 3500);
-    }
-}
-
-/* ==========================================================================
-   4. إدارة التخزين والتحقق الأمني الذكي (Storage & Auth Handlers)
-   ========================================================================== */
-class StorageHandler {
-    static load() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEYS.DB);
-            if (!raw) {
-                localStorage.setItem(STORAGE_KEYS.DB, JSON.stringify(DEFAULT_DB));
-                return JSON.parse(JSON.stringify(DEFAULT_DB));
-            }
-            const parsed = JSON.parse(raw);
-            return { ...DEFAULT_DB, ...parsed };
-        } catch (e) {
-            console.error("خطأ في قراءة التخزين المحلي:", e);
-            return JSON.parse(JSON.stringify(DEFAULT_DB));
-        }
-    }
-
-    static save(dbState) {
-        try {
-            localStorage.setItem(STORAGE_KEYS.DB, JSON.stringify(dbState));
-        } catch (e) {
-            console.error("خطأ في حفظ البيانات محلياً:", e);
-        }
-    }
-
-    static calculateStats() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEYS.DB) || "";
-            const bytes = raw.length * 2; 
-            if (bytes === 0) return "0 B";
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        } catch (e) {
-            return "غير معروف";
-        }
-    }
-}
-
-class AuthHandler {
-    // حساب وتوليد كلمة المرور الحسابية طبقاً للمواصفات البرمجية المطلوبة
-    static getDynamicPassword() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1; // رقم الشهر من 1 إلى 12
-
-        if (month >= 1 && month <= 5) {
-            return String(1 * year); // حاصل ضرب 1 في السنة الحالية
-        } else {
-            return String(6 * year); // حاصل ضرب 6 في السنة الحالية
-        }
-    }
-
-    static isUnlocked() {
-        const sessionActive = localStorage.getItem(STORAGE_KEYS.SESSION) === 'true';
-        if (!sessionActive) return false;
-
-        // التحقق من تاريخ فترة التعيين لمنع تجاوز الفترات عند التحول التلقائي للشهر
-        const unlockedPeriod = localStorage.getItem('apex_unlocked_period');
-        const currentPeriod = (new Date().getMonth() + 1) <= 5 ? '1' : '6';
-        if (unlockedPeriod !== currentPeriod) {
-            localStorage.removeItem(STORAGE_KEYS.SESSION);
-            localStorage.removeItem('apex_unlocked_period');
-            return false;
-        }
-        return true;
-    }
-
-    static verify(input) {
-        const correctPassword = AuthHandler.getDynamicPassword();
-        if (String(input).trim() === correctPassword) {
-            localStorage.setItem(STORAGE_KEYS.SESSION, 'true');
-            const currentPeriod = (new Date().getMonth() + 1) <= 5 ? '1' : '6';
-            localStorage.setItem('apex_unlocked_period', currentPeriod);
-            return true;
-        }
-        return false;
-    }
-
-    static lock() {
-        localStorage.removeItem(STORAGE_KEYS.SESSION);
-        localStorage.removeItem('apex_unlocked_period');
-    }
-}
-
-class UpdateHandler {
-    static async check() {
-        try {
-            const response = await fetch('version.json?nocache=' + Date.now());
-            if (response.ok) {
-                const data = await response.json();
-                return {
-                    hasUpdate: String(data.version) !== APP_VERSION,
-                    remoteVersion: String(data.version)
-                };
-            }
-        } catch (err) {
-            console.warn("تنبيه: تعذر جلب معلومات التحديث:", err);
-        }
-        return { hasUpdate: false, remoteVersion: APP_VERSION };
-    }
-}
-
-/* ==========================================================================
-   5. موديولات معالجة البيانات الفردية (Modules Core Engines)
-   ========================================================================== */
-
-// موديول الطلاب
-class StudentCRUD {
-    static save(db, formData, editId = null) {
-        if (editId) {
-            const idx = db.students.findIndex(s => s.id === editId);
-            if (idx !== -1) {
-                db.students[idx] = {
-                    ...db.students[idx],
-                    ...formData,
-                    requiredAmount: Number(db.students[idx].requiredAmount)
-                };
-                return db.students[idx];
-            }
-        } else {
-            const matchedGroup = db.groups.find(g => g.name === formData.group);
-            const cost = matchedGroup ? Number(matchedGroup.price || 0) : 0;
-            const newStudent = {
-                id: Helpers.generateID(),
-                code: Helpers.generateStudentCode(formData.year),
-                regDate: Helpers.getLocalDate(),
-                requiredAmount: cost,
-                ...formData
-            };
-            db.students.push(newStudent);
-            return newStudent;
-        }
-        return null;
-    }
-
-    static delete(db, id) {
-        db.students = db.students.filter(s => s.id !== id);
-        db.payments = db.payments.filter(p => p.studentId !== id);
-        db.attendance = db.attendance.filter(a => a.studentId !== id);
-    }
-}
-
-class StudentStats {
-    static getStats(db, studentId) {
-        const student = db.students.find(s => s.id === studentId);
-        if (!student) return { paid: 0, remaining: 0, ratio: 0, isLate: false };
-
-        const payments = db.payments.filter(p => p.studentId === studentId);
-        const paid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        const req = Number(student.requiredAmount || 0);
-        const remaining = Math.max(0, req - paid);
-        const ratio = req > 0 ? Math.min(100, Math.round((paid / req) * 100)) : 100;
-        const isLate = remaining > 0;
-
-        return { paid, remaining, ratio, isLate };
-    }
-}
-
-// موديول تسجيل الحضور
-class AttendanceService {
-    static record(db, code) {
-        const student = db.students.find(s => String(s.code).trim() === String(code).trim());
-        if (!student) {
-            return { success: false, message: "كود الطالب غير مسجل بالنظام ❌" };
-        }
-
-        const today = Helpers.getLocalDate();
-        const alreadyPresent = db.attendance.some(a => a.studentId === student.id && a.date === today);
-
-        if (alreadyPresent) {
-            const firstAtt = db.attendance.find(a => a.studentId === student.id && a.date === today);
-            return {
-                success: false,
-                message: `الطالب مسجل حضور بالفعل اليوم! ⚠️ (وقت الحضور: ${firstAtt.time})`,
-                student,
-                remaining: StudentStats.getStats(db, student.id).remaining
-            };
-        }
-
-        const newRecord = {
-            id: Helpers.generateID(),
-            studentId: student.id,
-            name: student.name,
-            group: student.group,
-            date: today,
-            time: Helpers.getLocalTime()
-        };
-        db.attendance.push(newRecord);
-
-        const stats = StudentStats.getStats(db, student.id);
-        return {
-            success: true,
-            message: `تم إثبات حضور الطالب بنجاح ✅ (وقت الحضور: ${newRecord.time})`,
-            student,
-            remaining: stats.remaining,
-            time: newRecord.time
-        };
-    }
-}
-
-// موديول المجموعات
-class GroupCRUD {
-    static save(db, data, editId = null) {
-        if (editId) {
-            const idx = db.groups.findIndex(g => g.id === editId);
-            if (idx !== -1) {
-                db.groups[idx] = { ...db.groups[idx], ...data };
-                return db.groups[idx];
-            }
-        } else {
-            const newGroup = {
-                id: Helpers.generateID(),
-                ...data
-            };
-            db.groups.push(newGroup);
-            return newGroup;
-        }
-        return null;
-    }
-
-    static delete(db, id, toast) {
-        const group = db.groups.find(g => g.id === id);
-        if (group) {
-            const hasStudents = db.students.some(s => s.group === group.name);
-            if (hasStudents) {
-                toast.trigger("error", "لا يمكن حذف المجموعة! توجد طلاب مسجلة بالفعل ضمن هذه المجموعة.");
-                return false;
-            }
-        }
-        db.groups = db.groups.filter(g => g.id !== id);
-        return true;
-    }
-}
-
-class GroupStats {
-    static getStats(db, group) {
-        const groupStudents = db.students.filter(s => s.group === group.name);
-        const studentCount = groupStudents.length;
-
-        const studentIds = groupStudents.map(s => s.id);
-        const payments = db.payments.filter(p => studentIds.includes(p.studentId));
-        const revenue = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-        const attendanceCount = db.attendance.filter(a => studentIds.includes(a.studentId)).length;
-        const distinctDates = [...new Set(db.attendance.filter(a => studentIds.includes(a.studentId)).map(a => a.date))].length || 1;
-        const potentialAttendance = studentCount * distinctDates;
-        const avgAttendance = potentialAttendance > 0 ? Math.round((attendanceCount / potentialAttendance) * 100) : 0;
-
-        return { studentCount, revenue, avgAttendance };
-    }
-}
-
-// موديول المدرسين
-class TeacherCRUD {
-    static save(db, data, editId = null) {
-        if (editId) {
-            const idx = db.teachers.findIndex(t => t.id === editId);
-            if (idx !== -1) {
-                db.teachers[idx] = { ...db.teachers[idx], ...data };
-                return db.teachers[idx];
-            }
-        } else {
-            const newTeacher = {
-                id: Helpers.generateID(),
-                ratio: Number(data.ratio || 0),
-                ...data
-            };
-            db.teachers.push(newTeacher);
-            return newTeacher;
-        }
-        return null;
-    }
-
-    static delete(db, id, toast) {
-        const hasGroups = db.groups.some(g => Number(g.teacherId) === Number(id));
-        if (hasGroups) {
-            toast.trigger("error", "لا يمكن حذف المعلم! توجد مجموعات دراسية نشطة تابعة له.");
-            return false;
-        }
-        db.teachers = db.teachers.filter(t => t.id !== id);
-        return true;
-    }
-}
-
-class TeacherStats {
-    static getStats(db, teacher) {
-        const teacherGroups = db.groups.filter(g => Number(g.teacherId) === Number(teacher.id));
-        const groupCount = teacherGroups.length;
-
-        const groupNames = teacherGroups.map(g => g.name);
-        const studentCount = db.students.filter(s => groupNames.includes(s.group)).length;
-
-        return { groupCount, studentCount };
-    }
-}
-
-// موديول القاعات الدراسية
-class HallCRUD {
-    static save(db, data, editId = null) {
-        if (editId) {
-            const idx = db.halls.findIndex(h => h.id === editId);
-            if (idx !== -1) {
-                db.halls[idx] = { ...db.halls[idx], ...data };
-                return db.halls[idx];
-            }
-        } else {
-            const newHall = {
-                id: Helpers.generateID(),
-                ...data
-            };
-            db.halls.push(newHall);
-            return newHall;
-        }
-        return null;
-    }
-
-    static delete(db, id, toast) {
-        const hasGroups = db.groups.some(g => Number(g.hallId) === Number(id));
-        if (hasGroups) {
-            toast.trigger("error", "لا يمكن حذف القاعة! توجد مجموعات دراسية تستخدم هذه القاعة حالياً.");
-            return false;
-        }
-        db.halls = db.halls.filter(h => h.id !== id);
-        return true;
-    }
-}
-
-class HallStats {
-    static getStats(db, hall) {
-        const hallGroups = db.groups.filter(g => Number(g.hallId) === Number(hall.id));
-        const groupCount = hallGroups.length;
-
-        const groupNames = hallGroups.map(g => g.name);
-        const studentCount = db.students.filter(s => groupNames.includes(s.group)).length;
-
-        const capacity = Number(hall.capacity || 1);
-        const occupancy = Math.min(100, Math.round((studentCount / capacity) * 100));
-
-        return { groupCount, occupancy };
-    }
-}
-
-// موديول المراحل الدراسية
-class YearCRUD {
-    static save(db, data, editId = null) {
-        if (editId) {
-            const idx = db.years.findIndex(y => y.id === editId);
-            if (idx !== -1) {
-                db.years[idx] = { ...db.years[idx], ...data };
-                return db.years[idx];
-            }
-        } else {
-            const newYear = {
-                id: Helpers.generateID(),
-                ...data
-            };
-            db.years.push(newYear);
-            return newYear;
-        }
-        return null;
-    }
-
-    static delete(db, id, toast) {
-        const year = db.years.find(y => y.id === id);
-        if (year) {
-            const hasStudents = db.students.some(s => s.year === year.name);
-            const hasGroups = db.groups.some(g => g.year === year.name);
-            if (hasStudents || hasGroups) {
-                toast.trigger("error", "لا يمكن حذف المرحلة! توجد طلاب أو مجموعات دراسية مرتبطة بها.");
-                return false;
-            }
-        }
-        db.years = db.years.filter(y => y.id !== id);
-        return true;
-    }
-}
-
-class ArchiveHandler {
-    static archive(db, archiveName) {
-        const archiveRecord = {
-            id: Helpers.generateID(),
-            name: archiveName || `العام الدراسي ${Helpers.getLocalDate()}`,
-            date: Helpers.getLocalDate(),
-            students: [...db.students],
-            payments: [...db.payments],
-            attendance: [...db.attendance]
-        };
-
-        db.archivedYears.push(archiveRecord);
-
-        db.students = [];
-        db.payments = [];
-        db.attendance = [];
-        db.logs.push({
-            action: "أرشفة سنوية",
-            detail: `تم ترحيل السنة الحالية باسم: ${archiveRecord.name}`,
-            time: Helpers.getLocalTime()
-        });
-    }
-}
-
-// موديول المالية والمقبوضات
-class PaymentHandler {
-    static save(db, paymentData) {
-        const newPayment = {
-            id: Helpers.generateID(),
-            date: Helpers.getLocalDate(),
-            time: Helpers.getLocalTime(),
-            ...paymentData
-        };
-        db.payments.push(newPayment);
-
-        const student = db.students.find(s => s.id === Number(paymentData.studentId));
-        db.logs.push({
-            action: "تحصيل اشتراك",
-            detail: `تم سداد مبلغ ${paymentData.amount} ج.م للطالب ${student ? student.name : 'مجهول'}`,
-            time: Helpers.getLocalTime()
-        });
-
-        return newPayment;
-    }
-}
-
-// موديول الكارنيهات والطباعة المتقدمة القياسية (85x55 مم)
-function generateCardQR(code) {
-    setTimeout(() => {
-        const target = document.getElementById('qrcode-card-box');
-        if (!target) return;
-        target.innerHTML = '';
-        new QRCode(target, {
-            text: String(code),
-            width: 75,
-            height: 75
-        });
-    }, 100);
-}
-
-function downloadSingleCard(st) {
-    if (!st) return;
-    const element = document.getElementById('card-preview-area');
-    const opt = {
-        margin: 0,
-        filename: 'Card_' + st.code + '.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: 'mm', format: [85, 55], orientation: 'landscape' }
-    };
-    html2pdf().from(element).set(opt).save();
-}
-
-function printAllCards(students, cardTemplate) {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    let cardsHtml = '';
-    
-    students.forEach(st => {
-        cardsHtml += `
-            <div class="card-item" style="width: 85mm; height: 55mm; border: 1px solid #ddd; border-radius: 12px; position: relative; margin: 10px; display: inline-flex; flex-direction: column; justify-content: space-between; background: ${cardTemplate ? `url(${cardTemplate})` : 'linear-gradient(135deg, #4f46e5, #0ea5e9)'}; color: ${cardTemplate ? '#333' : '#fff'}; font-family: 'Cairo', sans-serif; direction: rtl; box-sizing: border-box; padding: 15px; page-break-inside: avoid;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 800;">${st.name}</h4>
-                        <p style="margin: 0; font-size: 10px; opacity: 0.9;">${st.year}</p>
-                        <p style="margin: 2px 0 0 0; font-size: 10px; opacity: 0.9; font-weight: bold;">${st.group}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 9px; opacity: 0.8;">الهاتف: ${st.phone || '-'}</p>
-                    </div>
-                    <div style="text-align: center;">
-                        <img src="${st.image || 'https://via.placeholder.com/50'}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid #fff; margin-bottom: 4px;" />
-                        <div id="print-qr-${st.id}" style="background: white; padding: 2px; border-radius: 4px; display: inline-block;"></div>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 9px; opacity: 0.9; font-family: monospace;">
-                    <span style="font-weight: bold;">${st.code}</span>
-                    <span>أكاديمية أبيكس التعليمية</span>
-                </div>
-            </div>
-        `;
-    });
-    
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>طباعة الكارنيهات</title>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-            <style>
-                body { font-family: 'Cairo', sans-serif; margin: 0; padding: 15px; text-align: center; background: #fff; }
-                .card-item { page-break-inside: avoid; }
-                @media print { body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
-                ${cardsHtml}
-            </div>
-            <script>
-                setTimeout(() => {
-                    ${students.map(st => `try { new QRCode(document.getElementById('print-qr-${st.id}'), { text: '${st.code}', width: 40, height: 40 }); } catch(e) {}`).join('\n')}
-                    window.print();
-                    setTimeout(() => { window.close(); }, 1000);
-                }, 800);
-            <\/script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
-
-window._apexCards = { printAllCards, generateCardQR, downloadSingleCard };
-
-/* ==========================================================================
-   6. مخزن الحالات المركزي للتطبيق (Master Alpine Store)
-   ========================================================================== */
-window.ApexStore = {
-    db: null,
-    isUnlocked: false,
-    passwordInput: "",
-    passwordError: false,
-    showArchiveModal: false,
-    archiveYearName: "",
-    toast: new ToastManager(),
-    hasUpdate: false,
-    remoteVersion: "120",
-    globalQuery: "",
-    showGlobalSearchResults: false,
-    activeStudentDetails: null,
-    currentTab: "home",
-    editingStudent: null,
-
-    // Getters ديناميكية للربط التلقائي للبيانات
-    get students() { return this.db?.students || []; },
-    get teachers() { return this.db?.teachers || []; },
-    get attendance() { return this.db?.attendance || []; },
-    get payments() { return this.db?.payments || []; },
-    get groups() { return this.db?.groups || []; },
-    get years() { return this.db?.years || []; },
-    get halls() { return this.db?.halls || []; },
-    get archivedYears() { return this.db?.archivedYears || []; },
-    get logs() { return this.db?.logs || []; },
-    get cardTemplate() { return this.db?.cardTemplate || null; },
-
-    // ميثود مساعدة لعرض كود المرور النشط حالياً في لوحة التحكم
-    getActivePasswordLabel() {
-        return AuthHandler.getDynamicPassword();
-    },
-
-    // حساب الأيام المتبقية لانتقال الفترة البرمجية التالية تلقائياً
-    getPasswordExpiryDays() {
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        let targetDate;
-
-        if (month >= 1 && month <= 5) {
-            // غاية الفترة الأولى هي 31 مايو من نفس السنة
-            targetDate = new Date(currentYear, 4, 31, 23, 59, 59);
-        } else {
-            // غاية الفترة الثانية هي 31 ديسمبر من نفس السنة
-            targetDate = new Date(currentYear, 11, 31, 23, 59, 59);
-        }
+document.addEventListener('alpine:init', () => {
+    Alpine.store('apex', {
+        // الحالات الأساسية للنظام ومفاتيح التشغيل
+        isUnlocked: false,
+        passwordInput: '',
+        passwordError: false,
+        showArchiveModal: false,
+        archiveYearName: '',
+        showChangelogModal: false,
         
-        const diffMs = targetDate.getTime() - now.getTime();
-        return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-    },
+        toast: { show: false, message: '', type: 'success' },
+        hasUpdate: false,
+        remoteVersion: '121',
+        
+        globalQuery: '',
+        showGlobalSearchResults: false,
+        
+        currentTab: 'home',
+        
+        // قواعد البيانات والمصفوفات النشطة
+        students: [],
+        groups: [],
+        teachers: [],
+        halls: [],
+        years: [],
+        attendance: [],
+        payments: [],
+        financeRecords: [],
+        logs: [],
+        settings: {
+            centerName: 'أكاديمية أبيكس التعليمية',
+            adminName: 'مدير النظام',
+            password: '1234',
+            currency: 'ج.م'
+        },
+        cardTemplate: '',
+        
+        // كائنات التتبع المؤقتة ومسح الـ QR
+        activeStudentDetails: null,
+        editingStudent: null,
+        lastScannedStudent: { code: '', time: 0 },
+        
+        // متغيرات فحص الترخيص والقفل السحابي عن بعد (التعديل الثاني عشر)
+        isRemoteLocked: false,
+        remoteLockMessage: '',
+        licenseUrl: 'https://raw.githubusercontent.com/username/repo/main/license.json', 
+        
+        // فلترة طباعة الكارنيهات (المرحلة الخامسة)
+        cardPrintFilter: 'all', // 'all', 'printed', 'not_printed'
+        
+        // إدارة التقارير التفاعلية (المرحلة السابعة)
+        activeReportId: 'students',
+        reportsList: [
+            { id: 'students', name: '👥 تقرير الطلاب والمديونيات' },
+            { id: 'attendance', name: '📅 تقرير الحضور التفصيلي' },
+            { id: 'absence', name: '❌ تقرير الغياب والاتصال' },
+            { id: 'cards', name: '🪪 تقرير الكارنيهات والطباعة' },
+            { id: 'collection', name: '💰 تقرير تحصيل الاشتراكات' },
+            { id: 'finance', name: '📊 تقرير الإيرادات والمصروفات' },
+            { id: 'groups', name: '🏫 تقرير المجموعات والإشغال' },
+            { id: 'years', name: '🗓️ تقرير السنوات الدراسية' },
+            { id: 'teachers', name: '👨‍🏫 تقرير أداء المعلمين وعمولاتهم' }
+        ],
 
-    initApp() {
-        this.db = StorageHandler.load();
-        this.isUnlocked = AuthHandler.isUnlocked();
-        this.checkVersion();
-    },
+        // حقول وعناصر البحث الذكي الحصرية لكل جدول (المرحلة الرابعة)
+        searchTerms: {
+            students: '',
+            cards: '',
+            teachers: '',
+            groups: '',
+            years: '',
+            accounts: '',
+            finance: '',
+            attendance: '',
+            settings: '',
+            reports: ''
+        },
 
-    sync() {
-        StorageHandler.save(this.db);
-    },
+        initApp() {
+            // تحميل البيانات بشكل آمن ومستمر من LocalStorage
+            this.students = this.loadFromStorage('apex_students', []);
+            this.groups = this.loadFromStorage('apex_groups', []);
+            this.teachers = this.loadFromStorage('apex_teachers', []);
+            this.halls = this.loadFromStorage('apex_halls', []);
+            this.years = this.loadFromStorage('apex_years', []);
+            this.attendance = this.loadFromStorage('apex_attendance', []);
+            this.payments = this.loadFromStorage('apex_payments', []);
+            this.financeRecords = this.loadFromStorage('apex_finance_records', []);
+            this.logs = this.loadFromStorage('apex_logs', []);
+            this.settings = this.loadFromStorage('apex_settings', this.settings);
+            this.cardTemplate = localStorage.getItem('apex_card_template') || '';
+            
+            // قفل التطبيق وضبط الـ Password
+            const passStatus = localStorage.getItem('apex_is_unlocked');
+            if (passStatus === 'true') {
+                this.isUnlocked = true;
+            } else {
+                this.isUnlocked = false;
+            }
 
-    checkPassword() {
-        const verified = AuthHandler.verify(this.passwordInput);
-        if (verified) {
-            this.isUnlocked = true;
-            this.passwordError = false;
-            this.toast.trigger("success", "تم تسجيل الدخول بنجاح! مرحباً بك.");
-        } else {
-            this.passwordError = true;
-            this.toast.trigger("error", "رمز التحقق الدقيق غير مطابق للفترة الزمنية الحالية!");
-        }
-        this.passwordInput = "";
-    },
+            // توليد بيانات وهمية عند التشغيل للمرة الأولى لتسهيل المعاينة والاختبار
+            if (this.students.length === 0 && this.groups.length === 0 && this.years.length === 0) {
+                this.seedInitialData();
+            }
 
-    async checkVersion() {
-        const updateInfo = await UpdateHandler.check();
-        this.hasUpdate = updateInfo.hasUpdate;
-        this.remoteVersion = updateInfo.remoteVersion;
-    },
+            // إظهار نافذة التحديث الجديد مرة واحدة فقط (المرحلة الثانية عشرة)
+            const viewed = localStorage.getItem('apex_version_changelog_viewed');
+            if (viewed !== '121') {
+                this.showChangelogModal = true;
+            }
 
-    triggerUpdate() {
-        this.toast.trigger("warning", "يتم تحميل التحديث والملفات الجديدة...");
-        setTimeout(() => {
-            window.location.reload(true);
-        }, 1000);
-    },
+            this.addLog('تشغيل التطبيق', 'تم فتح نظام أكاديمية أبيكس المطور بنسخته المستقرة v121');
+            
+            // فحص ترخيص النسخة واستدعاء القفل التلقائي عن بعد (التعديل الثاني عشر)
+            this.checkRemoteLicense();
+        },
 
-    getBackupInfo() {
-        return {
-            date: Helpers.getLocalDate(),
-            version: "120",
-            size: StorageHandler.calculateStats(),
-            recordsCount: this.students.length + this.payments.length + this.attendance.length
-        };
-    },
+        seedInitialData() {
+            this.years = [
+                { id: 1, name: 'الصف الأول الثانوي' },
+                { id: 2, name: 'الصف الثاني الثانوي' },
+                { id: 3, name: 'الصف الثالث الثانوي' }
+            ];
+            this.halls = [
+                { id: 1, name: 'قاعة الأوائل', capacity: 100 },
+                { id: 2, name: 'قاعة النخبة', capacity: 60 }
+            ];
+            this.teachers = [
+                { id: 1, name: 'أ. حسام الدين محمد', subject: 'الرياضيات', phone: '01002233445', ratio: 80 },
+                { id: 2, name: 'أ. رانيا شاهين', subject: 'اللغة الإنجليزية', phone: '01223344556', ratio: 75 }
+            ];
+            this.groups = [
+                { id: 1, name: 'مجموعة أ - رياضيات أول ثانوي', year: 'الصف الأول الثانوي', price: 150, hallId: 1, teacherId: 1, hall: 'قاعة الأوائل', teacher: 'أ. حسام الدين محمد', days: 'السبت والاثنين والأربعاء', time: '03:00 م - 05:00 م' },
+                { id: 2, name: 'مجموعة ب - إنجليزي ثاني ثانوي', year: 'الصف الثاني الثانوي', price: 200, hallId: 2, teacherId: 2, hall: 'قاعة النخبة', teacher: 'أ. رانيا شاهين', days: 'الأحد والثلاثاء والخميس', time: '05:00 م - 07:00 م' }
+            ];
+            this.students = [
+                { id: 1, code: 'ST-1001', name: 'أحمد محمود علي إسماعيل', year: 'الصف الأول الثانوي', group: 'مجموعة أ - رياضيات أول ثانوي', phone: '01122334455', parentPhone: '01556677889', school: 'الخديوية الثانوية', regDate: new Date().toLocaleDateString('ar-EG'), image: '', printedState: 'not_printed', requiredAmount: 150 },
+                { id: 2, code: 'ST-1002', name: 'سارة عبد الرحمن محمد كامل', year: 'الصف الثاني الثانوي', group: 'مجموعة ب - إنجليزي ثاني ثانوي', phone: '01228899001', parentPhone: '01004455667', school: 'أم المؤمنين الثانوية', regDate: new Date().toLocaleDateString('ar-EG'), image: '', printedState: 'not_printed', requiredAmount: 200 }
+            ];
+            this.payments = [
+                { id: 1, studentId: 1, amount: 150, month: 'سبتمبر', date: new Date().toLocaleDateString('ar-EG') }
+            ];
+            this.financeRecords = [
+                { id: 1, type: 'income', title: 'تحصيل اشتراك الطالب أحمد محمود', category: 'اشتراكات', amount: 150, date: new Date().toLocaleDateString('ar-EG') },
+                { id: 2, type: 'expense', title: 'شراء أقلام سبورة وأدوات مكتبية', category: 'أدوات مكتبية', amount: 50, date: new Date().toLocaleDateString('ar-EG') }
+            ];
+            this.logs = [
+                { id: 1, action: 'تثبيت النظام', detail: 'تم تهيئة النظام بالبيانات الأولية الافتراضية بنجاح v121', time: new Date().toLocaleTimeString('ar-EG') }
+            ];
 
-    get globalSearchResults() {
-        if (!this.globalQuery) return { students: [], teachers: [], groups: [] };
-        const q = this.globalQuery.toLowerCase();
-        return {
-            students: this.students.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)),
-            teachers: this.teachers.filter(t => t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)),
-            groups: this.groups.filter(g => g.name.toLowerCase().includes(q))
-        };
-    },
+            this.saveToStorage('apex_years', this.years);
+            this.saveToStorage('apex_halls', this.halls);
+            this.saveToStorage('apex_teachers', this.teachers);
+            this.saveToStorage('apex_groups', this.groups);
+            this.saveToStorage('apex_students', this.students);
+            this.saveToStorage('apex_payments', this.payments);
+            this.saveToStorage('apex_finance_records', this.financeRecords);
+            this.saveToStorage('apex_logs', this.logs);
+        },
 
-    get dashboardStats() {
-        const totalRevenue = this.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        const totalRequired = this.students.reduce((sum, s) => sum + Number(s.requiredAmount || 0), 0);
-        const arrears = Math.max(0, totalRequired - totalRevenue);
+        loadFromStorage(key, defaultValue) {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        },
+        saveToStorage(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        },
 
-        return {
-            studentsCount: this.students.length,
-            groupsCount: this.groups.length,
-            teachersCount: this.teachers.length,
-            hallsCount: this.halls.length,
-            yearsCount: this.years.length,
-            attendanceCount: this.attendance.length,
-            revenue: totalRevenue,
-            arrears: arrears
-        };
-    },
+        checkPassword() {
+            const correctPass = this.settings.password || '1234';
+            if (this.passwordInput === correctPass) {
+                this.isUnlocked = true;
+                localStorage.setItem('apex_is_unlocked', 'true');
+                this.passwordError = false;
+                this.passwordInput = '';
+                this.showToast('مرحباً بك! تم فك قفل النظام بنجاح', 'success');
+            } else {
+                this.passwordError = true;
+                this.showToast('كلمة المرور خاطئة. يرجى إعادة المحاولة', 'error');
+            }
+        },
+        lockApp() {
+            this.isUnlocked = false;
+            localStorage.setItem('apex_is_unlocked', 'false');
+            this.showToast('تم تسجيل الخروج وقفل النظام بنجاح', 'info');
+        },
 
-    get last7DaysAttendance() {
-        const days = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
-            const count = this.attendance.filter(a => a.date === dateStr).length;
-            const label = d.toLocaleDateString('ar-EG', { weekday: 'short' });
-            days.push({ label, count, date: dateStr });
-        }
-        return days;
-    },
-
-    get hallOccupancy() {
-        return this.halls.map(h => {
-            const stats = HallStats.getStats(this.db, h);
+        get globalSearchResults() {
+            const q = this.globalQuery.toLowerCase().trim();
+            if (!q) return { students: [], teachers: [], groups: [] };
+            
             return {
-                name: h.name,
-                count: stats.groupCount, 
-                capacity: h.capacity,
-                pct: stats.occupancy
+                students: this.students.filter(s => 
+                    s.name.toLowerCase().includes(q) || 
+                    s.code.toLowerCase().includes(q) || 
+                    (s.phone && s.phone.includes(q)) ||
+                    (s.parentPhone && s.parentPhone.includes(q)) ||
+                    s.group.toLowerCase().includes(q)
+                ).slice(0, 5),
+                teachers: this.teachers.filter(t => 
+                    t.name.toLowerCase().includes(q) || 
+                    t.subject.toLowerCase().includes(q)
+                ).slice(0, 5),
+                groups: this.groups.filter(g => 
+                    g.name.toLowerCase().includes(q) || 
+                    g.year.toLowerCase().includes(q)
+                ).slice(0, 5)
             };
-        });
-    },
+        },
 
-    saveStudent(data, id = null) {
-        const student = StudentCRUD.save(this.db, data, id);
-        this.sync();
-        if (id) {
-            this.toast.trigger("success", "تم تعديل بيانات الطالب بنجاح!");
-        } else {
-            this.toast.trigger("success", `تم تسجيل الطالب بنجاح! كود الطالب: ${student.code}`);
-        }
-        this.editingStudent = null;
-        return student;
-    },
-
-    deleteStudent(id) {
-        if (confirm("هل أنت متأكد من حذف الطالب وسجل مدفوعاته بالكامل؟")) {
-            StudentCRUD.delete(this.db, id);
-            this.sync();
-            this.toast.trigger("success", "تم حذف سجل الطالب بنجاح.");
-        }
-    },
-
-    getStudentStats(id) {
-        return StudentStats.getStats(this.db, id);
-    },
-
-    recordAttendanceByCode(code) {
-        const res = AttendanceService.record(this.db, code);
-        this.sync();
-        if (res.success) {
-            this.toast.trigger("success", res.message);
-        } else {
-            this.toast.trigger("warning", res.message);
-        }
-        return res;
-    },
-
-    saveGroup(data, id = null) {
-        const group = GroupCRUD.save(this.db, data, id);
-        this.sync();
-        this.toast.trigger("success", "تم حفظ وتحديث المجموعة بنجاح!");
-        return group;
-    },
-
-    deleteGroup(id) {
-        if (confirm("هل تريد حذف هذه المجموعة الدراسية؟")) {
-            const deleted = GroupCRUD.delete(this.db, id, this.toast);
-            if (deleted) {
-                this.sync();
-                this.toast.trigger("success", "تم حذف المجموعة التعليمية.");
-            }
-        }
-    },
-
-    getGroupStats(group) {
-        return GroupStats.getStats(this.db, group);
-    },
-
-    saveTeacher(data, id = null) {
-        const t = TeacherCRUD.save(this.db, data, id);
-        this.sync();
-        this.toast.trigger("success", "تم حفظ وتحديث المعلم بنجاح!");
-        return t;
-    },
-
-    deleteTeacher(id) {
-        if (confirm("هل تريد إزالة هذا المعلم؟")) {
-            const deleted = TeacherCRUD.delete(this.db, id, this.toast);
-            if (deleted) {
-                this.sync();
-                this.toast.trigger("success", "تم حذف المعلم بنجاح.");
-            }
-        }
-    },
-
-    getTeacherStats(teacher) {
-        return TeacherStats.getStats(this.db, teacher);
-    },
-
-    saveHall(data, id = null) {
-        const h = HallCRUD.save(this.db, data, id);
-        this.sync();
-        this.toast.trigger("success", "تم حفظ القاعة بنجاح!");
-        return h;
-    },
-
-    deleteHall(id) {
-        if (confirm("هل تريد إزالة هذه القاعة الدراسية؟")) {
-            const deleted = HallCRUD.delete(this.db, id, this.toast);
-            if (deleted) {
-                this.sync();
-                this.toast.trigger("success", "تم إزالة القاعة.");
-            }
-        }
-    },
-
-    getHallStats(hall) {
-        return HallStats.getStats(this.db, hall);
-    },
-
-    saveYear(data, id = null) {
-        const y = YearCRUD.save(this.db, data, id);
-        this.sync();
-        this.toast.trigger("success", "تم حفظ المرحلة الدراسية.");
-        return y;
-    },
-
-    deleteYear(id) {
-        if (confirm("هل تريد حذف هذه المرحلة؟")) {
-            const deleted = YearCRUD.delete(this.db, id, this.toast);
-            if (deleted) {
-                this.sync();
-                this.toast.trigger("success", "تم إزالة المرحلة الدراسية بنجاح.");
-            }
-        }
-    },
-
-    savePayment(paymentData) {
-        const pay = PaymentHandler.save(this.db, paymentData);
-        this.sync();
-        this.toast.trigger("success", `تم تسجيل عملية الدفع بمبلغ ${paymentData.amount} ج.م`);
-        return pay;
-    },
-
-    confirmArchiveYear() {
-        if (!this.archiveYearName.trim()) {
-            this.toast.trigger("warning", "الرجاء تحديد اسم صالح للأرشيف!");
-            return;
-        }
-        ArchiveHandler.archive(this.db, this.archiveYearName);
-        this.sync();
-        this.showArchiveModal = false;
-        this.archiveYearName = "";
-        this.toast.trigger("success", "تم ترحيل وحفظ بيانات العام الدراسي بأمان ✅");
-    },
-
-    deleteArchivedYear(id) {
-        if (confirm("هل أنت متأكد من حذف هذا الأرشيف التاريخي نهائياً؟")) {
-            this.db.archivedYears = this.db.archivedYears.filter(a => a.id !== id);
-            this.sync();
-            this.toast.trigger("success", "تم حذف الأرشيف.");
-        }
-    },
-
-    restoreArchivedYear(arch) {
-        if (confirm("هل ترغب في استعراض الأرشيف؟ سيتم حفظ النسخة الحالية واستعادة بيانات الأرشيف.")) {
-            this.db.students = arch.students;
-            this.db.payments = arch.payments;
-            this.db.attendance = arch.attendance;
-            this.sync();
-            this.toast.trigger("success", `تم استعراض أرشيف: ${arch.name}`);
-        }
-    },
-
-    uploadCardTemplate(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.db.cardTemplate = e.target.result;
-                this.sync();
-                this.toast.trigger("success", "تم تحميل وحفظ قالب الكارنيه بنجاح!");
+        addLog(action, detail) {
+            const newLog = {
+                id: Date.now(),
+                action,
+                detail,
+                time: new Date().toLocaleTimeString('ar-EG')
             };
-            reader.readAsDataURL(file);
-        }
-    },
+            this.logs.unshift(newLog);
+            if (this.logs.length > 50) this.logs.pop();
+            this.saveToStorage('apex_logs', this.logs);
+        },
 
-    generateDetailsQR(code) {
-        setTimeout(() => {
-            const target = document.getElementById('details-qrcode-box');
-            if (!target) return;
-            target.innerHTML = '';
-            new QRCode(target, {
-                text: String(code),
-                width: 85,
-                height: 85
+        showToast(message, type = 'success') {
+            this.toast.message = message;
+            this.toast.type = type;
+            this.toast.show = true;
+            setTimeout(() => {
+                this.toast.show = false;
+            }, 3000);
+        },
+
+        // العمليات الخاصة بالطلاب
+        getStudentStats(studentId) {
+            const student = this.students.find(s => s.id === studentId);
+            if (!student) return { isLate: false, remaining: 0, paid: 0, ratio: 0 };
+
+            const group = this.groups.find(g => g.name === student.group);
+            const required = Number(student.requiredAmount) || (group ? Number(group.price) : 0);
+
+            const studentPayments = this.payments.filter(p => p.studentId === studentId);
+            const paid = studentPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+            const remaining = Math.max(0, required - paid);
+            const isLate = remaining > 0;
+            const ratio = required > 0 ? Math.min(100, Math.round((paid / required) * 100)) : 0;
+
+            return { isLate, remaining, paid, ratio };
+        },
+
+        saveStudent(data, id) {
+            if (id) {
+                // تعديل ملف طالب
+                const idx = this.students.findIndex(s => s.id === id);
+                if (idx !== -1) {
+                    const group = this.groups.find(g => g.name === data.group);
+                    this.students[idx] = {
+                        ...this.students[idx],
+                        ...data,
+                        requiredAmount: group ? Number(group.price) : this.students[idx].requiredAmount
+                    };
+                    this.saveToStorage('apex_students', this.students);
+                    this.addLog('تعديل طالب', `تم تحديث ملف الطالب ${data.name}`);
+                    this.showToast('تم تعديل بيانات الطالب بنجاح', 'success');
+                }
+            } else {
+                // تسجيل طالب جديد
+                const stCode = 'ST-' + Math.floor(1000 + Math.random() * 9000);
+                const group = this.groups.find(g => g.name === data.group);
+                const newStudent = {
+                    id: Date.now(),
+                    code: stCode,
+                    ...data,
+                    regDate: new Date().toLocaleDateString('ar-EG'),
+                    printedState: 'not_printed',
+                    requiredAmount: group ? Number(group.price) : 0
+                };
+                this.students.unshift(newStudent);
+                this.saveToStorage('apex_students', this.students);
+                this.addLog('تسجيل طالب', `تم تسجيل الطالب الجديد ${data.name}`);
+                this.showToast('تم تسجيل الطالب وتوليد كود الحضور بنجاح', 'success');
+                return newStudent;
+            }
+        },
+
+        deleteStudent(id) {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الطالب نهائياً من النظام؟')) {
+                const student = this.students.find(s => s.id === id);
+                this.students = this.students.filter(s => s.id !== id);
+                this.payments = this.payments.filter(p => p.studentId !== id);
+                this.attendance = this.attendance.filter(a => a.studentId !== id);
+                
+                this.saveToStorage('apex_students', this.students);
+                this.saveToStorage('apex_payments', this.payments);
+                this.saveToStorage('apex_attendance', this.attendance);
+                
+                this.addLog('حذف طالب', `تم حذف الطالب ${student ? student.name : ''}`);
+                this.showToast('تم حذف الطالب وكافة سجلاته المالية وحضوره بنجاح', 'success');
+            }
+        },
+
+        // العمليات الخاصة بالمجموعات
+        getGroupStats(group) {
+            const groupStudents = this.students.filter(s => s.group === group.name);
+            const studentCount = groupStudents.length;
+
+            let revenue = 0;
+            groupStudents.forEach(st => {
+                const stPayments = this.payments.filter(p => p.studentId === st.id);
+                revenue += stPayments.reduce((sum, p) => sum + Number(p.amount), 0);
             });
-        }, 100);
-    },
 
-    exportData() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.db));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `Apex_Academy_DB_${Date.now()}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        document.body.removeChild(downloadAnchor);
-        this.toast.trigger("success", "تم تصدير ملف النسخة الاحتياطية بأمان.");
-    },
+            // معدلات الحضور والغياب
+            const groupAttendanceCount = this.attendance.filter(a => a.group === group.name).length;
+            const uniqueDates = [...new Set(this.attendance.filter(a => a.group === group.name).map(a => a.date))].length;
+            const maxPossibleAttendance = studentCount * Math.max(1, uniqueDates);
+            const avgAttendance = maxPossibleAttendance > 0 ? Math.min(100, Math.round((groupAttendanceCount / maxPossibleAttendance) * 100)) : 0;
 
-    importData(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
+            return { studentCount, revenue, avgAttendance };
+        },
+
+        saveGroup(data, id) {
+            if (id) {
+                const idx = this.groups.findIndex(g => g.id === id);
+                if (idx !== -1) {
+                    this.groups[idx] = { ...this.groups[idx], ...data };
+                    this.saveToStorage('apex_groups', this.groups);
+                    this.addLog('تعديل مجموعة', `تم تحديث بيانات المجموعة ${data.name}`);
+                    this.showToast('تم تعديل المجموعة بنجاح', 'success');
+                }
+            } else {
+                const newGroup = {
+                    id: Date.now(),
+                    ...data
+                };
+                this.groups.push(newGroup);
+                this.saveToStorage('apex_groups', this.groups);
+                this.addLog('إضافة مجموعة', `تم إنشاء مجموعة دراسية جديدة ${data.name}`);
+                this.showToast('تم إضافة المجموعة بنجاح', 'success');
+            }
+        },
+
+        deleteGroup(id) {
+            if (confirm('هل أنت متأكد من حذف هذه المجموعة؟ لن يتم حذف الطلاب المرتبطين بها.')) {
+                const g = this.groups.find(gr => gr.id === id);
+                this.groups = this.groups.filter(gr => gr.id !== id);
+                this.saveToStorage('apex_groups', this.groups);
+                this.addLog('حذف مجموعة', `تم حذف المجموعة ${g ? g.name : ''}`);
+                this.showToast('تم حذف المجموعة بنجاح', 'success');
+            }
+        },
+
+        // العمليات والتحصيلات المالية
+        savePayment(data) {
+            let studentId = data.studentId;
+            let amount = Number(data.amount);
+            let month = data.month || 'عام';
+            
+            if (!studentId && data.code) {
+                const st = this.students.find(s => s.code === data.code);
+                if (st) {
+                    studentId = st.id;
+                }
+            }
+
+            if (!studentId) {
+                this.showToast('حدث خطأ: لم يتم تحديد الطالب بنجاح', 'error');
+                return;
+            }
+
+            const student = this.students.find(s => s.id === studentId);
+            const newPayment = {
+                id: Date.now(),
+                studentId,
+                amount,
+                month,
+                date: new Date().toLocaleDateString('ar-EG')
+            };
+
+            this.payments.unshift(newPayment);
+            this.saveToStorage('apex_payments', this.payments);
+
+            // ترحيلها للمعاملات اليومية للصندوق
+            const newTransaction = {
+                id: Date.now() + 1,
+                type: 'income',
+                title: `تحصيل اشتراك الطالب: ${student ? student.name : 'طالب'} (شهر: ${month})`,
+                category: 'اشتراكات',
+                amount,
+                date: new Date().toLocaleDateString('ar-EG')
+            };
+            this.financeRecords.unshift(newTransaction);
+            this.saveToStorage('apex_finance_records', this.financeRecords);
+
+            this.addLog('تحصيل اشتراك', `تم تحصيل ${amount} ج.م من الطالب ${student ? student.name : ''}`);
+            this.showToast('تم تسجيل دفعة الاشتراك وحفظها مالياً', 'success');
+        },
+
+        saveTransaction(data) {
+            const newRecord = {
+                id: Date.now(),
+                type: data.type,
+                title: data.title,
+                category: data.category || 'عام',
+                amount: Number(data.amount),
+                date: new Date().toLocaleDateString('ar-EG')
+            };
+            this.financeRecords.unshift(newRecord);
+            this.saveToStorage('apex_finance_records', this.financeRecords);
+            
+            const typeStr = data.type === 'income' ? 'إيراد جديد' : 'مصروف جديد';
+            this.addLog(typeStr, `تم تسجيل ${data.title} بقيمة ${data.amount} ج.م`);
+            this.showToast('تم حفظ المعاملة المالية بنجاح', 'success');
+        },
+
+        // إدارة المعلمين والنسب
+        getTeacherStats(t) {
+            const tGroups = this.groups.filter(g => g.teacherId === t.id || g.teacher === t.name);
+            const groupCount = tGroups.length;
+
+            let studentCount = 0;
+            tGroups.forEach(g => {
+                studentCount += this.students.filter(s => s.group === g.name).length;
+            });
+
+            return { groupCount, studentCount };
+        },
+
+        saveTeacher(data, id) {
+            if (id) {
+                const idx = this.teachers.findIndex(t => t.id === id);
+                if (idx !== -1) {
+                    this.teachers[idx] = { ...this.teachers[idx], ...data };
+                    this.saveToStorage('apex_teachers', this.teachers);
+                    this.addLog('تعديل معلم', `تم تحديث ملف المعلم ${data.name}`);
+                    this.showToast('تم تعديل بيانات المعلم بنجاح', 'success');
+                }
+            } else {
+                const newTeacher = {
+                    id: Date.now(),
+                    ...data,
+                    ratio: data.ratio || 80
+                };
+                this.teachers.push(newTeacher);
+                this.saveToStorage('apex_teachers', this.teachers);
+                this.addLog('إضافة معلم', `تم تسجيل المعلم الجديد ${data.name}`);
+                this.showToast('تم إضافة المعلم بنجاح', 'success');
+            }
+        },
+
+        deleteTeacher(id) {
+            if (confirm('هل أنت متأكد من حذف هذا المعلم؟')) {
+                const t = this.teachers.find(teach => teach.id === id);
+                this.teachers = this.teachers.filter(teach => teach.id !== id);
+                this.saveToStorage('apex_teachers', this.teachers);
+                this.addLog('حذف معلم', `تم حذف المعلم ${t ? t.name : ''}`);
+                this.showToast('تم حذف المعلم بنجاح', 'success');
+            }
+        },
+
+        // إدارة القاعات والاستيعاب
+        getHallStats(h) {
+            const hGroups = this.groups.filter(g => g.hallId === h.id || g.hall === h.name);
+            const groupCount = hGroups.length;
+
+            let totalStudents = 0;
+            hGroups.forEach(g => {
+                totalStudents += this.students.filter(s => s.group === g.name).length;
+            });
+
+            const capacity = h.capacity || 50;
+            const occupancy = Math.min(100, Math.round((totalStudents / capacity) * 100));
+
+            return { groupCount, occupancy };
+        },
+
+        saveHall(data, id) {
+            if (id) {
+                const idx = this.halls.findIndex(h => h.id === id);
+                if (idx !== -1) {
+                    this.halls[idx] = { ...this.halls[idx], ...data };
+                    this.saveToStorage('apex_halls', this.halls);
+                    this.addLog('تعديل قاعة', `تم تحديث بيانات القاعة ${data.name}`);
+                    this.showToast('تم تعديل القاعة بنجاح', 'success');
+                }
+            } else {
+                const newHall = {
+                    id: Date.now(),
+                    capacity: data.capacity || 50,
+                    ...data
+                };
+                this.halls.push(newHall);
+                this.saveToStorage('apex_halls', this.halls);
+                this.addLog('إضافة قاعة', `تم إنشاء قاعة دراسية جديدة ${data.name}`);
+                this.showToast('تم إضافة القاعة بنجاح', 'success');
+            }
+        },
+
+        deleteHall(id) {
+            if (confirm('هل أنت متأكد من حذف هذه القاعة؟')) {
+                const h = this.halls.find(ha => ha.id === id);
+                this.halls = this.halls.filter(ha => ha.id !== id);
+                this.saveToStorage('apex_halls', this.halls);
+                this.addLog('حذف قاعة', `تم حذف القاعة ${h ? h.name : ''}`);
+                this.showToast('تم حذف القاعة بنجاح', 'success');
+            }
+        },
+
+        // إدارة السنوات الأكاديمية
+        saveYear(data, id) {
+            if (id) {
+                const idx = this.years.findIndex(y => y.id === id);
+                if (idx !== -1) {
+                    this.years[idx] = { ...this.years[idx], ...data };
+                    this.saveToStorage('apex_years', this.years);
+                    this.addLog('تعديل سنة دراسية', `تم تعديل المرحلة ${data.name}`);
+                    this.showToast('تم تعديل السنة الدراسية بنجاح', 'success');
+                }
+            } else {
+                const newYear = {
+                    id: Date.now(),
+                    ...data
+                };
+                this.years.push(newYear);
+                this.saveToStorage('apex_years', this.years);
+                this.addLog('إضافة سنة دراسية', `تم إضافة المرحلة الدراسية ${data.name}`);
+                this.showToast('تم إضافة السنة الدراسية بنجاح', 'success');
+            }
+        },
+
+        deleteYear(id) {
+            if (confirm('هل أنت متأكد من حذف هذه السنة الدراسية؟')) {
+                const y = this.years.find(ye => ye.id === id);
+                this.years = this.years.filter(ye => ye.id !== id);
+                this.saveToStorage('apex_years', this.years);
+                this.addLog('حذف سنة دراسية', `تم حذف المرحلة ${y ? y.name : ''}`);
+                this.showToast('تم حذف السنة الدراسية بنجاح', 'success');
+            }
+        },
+
+        // دالة الفحص السحابي والتحقق من الإنترنت (التعديل الثاني عشر)
+        async checkRemoteLicense() {
+            const localLockStatus = localStorage.getItem('apex_remote_locked');
+            if (localLockStatus === 'true') {
+                this.isRemoteLocked = true;
+                this.remoteLockMessage = localStorage.getItem('apex_remote_lock_msg') || 'تم إيقاف الترخيص عن بعد.';
+            }
+
+            if (navigator.onLine && this.licenseUrl) {
                 try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (parsed.students && parsed.settings) {
-                        this.db = parsed;
-                        this.sync();
-                        this.toast.trigger("success", "تم استيراد قاعدة البيانات واستعادتها بنجاح!");
-                        setTimeout(() => window.location.reload(), 1200);
-                    } else {
-                        this.toast.trigger("error", "ملف النسخة الاحتياطية غير صالح!");
+                    const response = await fetch(this.licenseUrl + '?t=' + Date.now(), { cache: "no-store" });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.locked === true) {
+                            this.isRemoteLocked = true;
+                            this.remoteLockMessage = data.message;
+                            localStorage.setItem('apex_remote_locked', 'true');
+                            localStorage.setItem('apex_remote_lock_msg', data.message);
+                        } else {
+                            this.isRemoteLocked = false;
+                            localStorage.removeItem('apex_remote_locked');
+                            localStorage.removeItem('apex_remote_lock_msg');
+                        }
                     }
                 } catch (err) {
-                    this.toast.trigger("error", "خطأ في قراءة ملف JSON.");
+                    console.log("Offline or server error, loaded cached license status.");
                 }
+            }
+        },
+
+        // مسح كل شيء وإعادة ضبط المصنع الآمنة للنظام (المرحلة الحادية عشرة المحدثة)
+        clearAllData() {
+            if (confirm('⚠️ تحذير شديد الخطورة: سيتم مسح كافة البيانات المسجلة بالبرنامج (الطلاب، المجموعات، الحضور، المالية، الأرشيف السنوي، والإعدادات) نهائياً ولا يمكن التراجع عن هذا الإجراء! هل تريد الاستمرار بالفعل؟')) {
+                
+                const passwordText = prompt('الرجاء كتابة كلمة مرور النظام الحالية لتأكيد مسح كل شيء:');
+                const correctPass = this.settings.password || '1234';
+                
+                if (passwordText === correctPass) {
+                    localStorage.removeItem('apex_students');
+                    localStorage.removeItem('apex_groups');
+                    localStorage.removeItem('apex_teachers');
+                    localStorage.removeItem('apex_halls');
+                    localStorage.removeItem('apex_years');
+                    localStorage.removeItem('apex_attendance');
+                    localStorage.removeItem('apex_payments');
+                    localStorage.removeItem('apex_finance_records');
+                    localStorage.removeItem('apex_logs');
+                    localStorage.removeItem('apex_settings');
+                    localStorage.removeItem('apex_archived_years');
+                    localStorage.removeItem('apex_card_template');
+                    localStorage.removeItem('apex_is_unlocked');
+                    localStorage.removeItem('apex_remote_locked');
+                    localStorage.removeItem('apex_remote_lock_msg');
+                    
+                    this.showToast('تم مسح وإعادة تهيئة النظام بنجاح، جاري إعادة التشغيل...', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    this.showToast('فشل التحقق: كلمة المرور غير صحيحة، تم إلغاء عملية المسح', 'error');
+                }
+            }
+        },
+
+        // ترحيل الأرشيف السنوي مغلق ومستقل
+        confirmArchiveYear() {
+            if (!this.archiveYearName.trim()) {
+                this.showToast('يرجى تحديد اسم السنة أو الدفعة للأرشفة', 'warning');
+                return;
+            }
+
+            const archiveRecord = {
+                id: Date.now(),
+                name: this.archiveYearName.trim(),
+                date: new Date().toLocaleDateString('ar-EG'),
+                students: [...this.students],
+                groups: [...this.groups],
+                payments: [...this.payments],
+                attendance: [...this.attendance]
             };
-            reader.readAsText(file);
+
+            this.archivedYears = this.loadFromStorage('apex_archived_years', []);
+            this.archivedYears.unshift(archiveRecord);
+            this.saveToStorage('apex_archived_years', this.archivedYears);
+
+            this.students = [];
+            this.payments = [];
+            this.attendance = [];
+            
+            this.saveToStorage('apex_students', this.students);
+            this.saveToStorage('apex_payments', this.payments);
+            this.saveToStorage('apex_attendance', this.attendance);
+
+            this.addLog('ترحيل الأرشيف', `تم ترحيل وحفظ دفعة ${archiveRecord.name} بنجاح`);
+            this.showToast(`تم أرشفة البيانات وترحيلها بنجاح لعام ${archiveRecord.name}`, 'success');
+
+            this.showArchiveModal = false;
+            this.archiveYearName = '';
+        },
+
+        deleteArchivedYear(id) {
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا الأرشيف نهائياً؟ لا يمكن استعادة البيانات المحذوفة.')) {
+                this.archivedYears = this.archivedYears.filter(a => a.id !== id);
+                this.saveToStorage('apex_archived_years', this.archivedYears);
+                this.addLog('حذف أرشيف', 'تم حذف أحد ملفات الأرشيف السنوية');
+                this.showToast('تم حذف الأرشيف السنوي بنجاح', 'success');
+            }
+        },
+
+        restoreArchivedYear(arch) {
+            if (confirm(`تحذير: سيتم دمج طلاب وأنشطة أرشيف [${arch.name}] مع البيانات الحالية للنظام. هل تود الاستمرار؟`)) {
+                this.students = [...this.students, ...arch.students];
+                const uniqueStudents = [];
+                const map = new Map();
+                for (const item of this.students) {
+                    if(!map.has(item.code)){
+                        map.set(item.code, true);
+                        uniqueStudents.push(item);
+                    }
+                }
+                this.students = uniqueStudents;
+                this.payments = [...this.payments, ...arch.payments];
+                this.attendance = [...this.attendance, ...arch.attendance];
+
+                this.saveToStorage('apex_students', this.students);
+                this.saveToStorage('apex_payments', this.payments);
+                this.saveToStorage('apex_attendance', this.attendance);
+
+                this.addLog('استعادة أرشيف', `تم استعادة ودمج أرشيف ${arch.name}`);
+                this.showToast('تم استعادة ودمج بيانات الأرشيف بنجاح', 'success');
+            }
+        },
+
+        // أدوات تصدير التقارير وجداول البيانات للطباعة عالية الدقة (المرحلة الثالثة)
+        async printTable(title, headers, rows, filename = 'Students_Report.pdf') {
+            this.showToast('جاري تحضير ملف الطباعة...', 'info');
+
+            const reportContainer = document.createElement('div');
+            reportContainer.style.position = 'absolute';
+            reportContainer.style.left = '-9999px';
+            reportContainer.style.top = '-9999px';
+            reportContainer.style.width = '800px';
+            reportContainer.style.padding = '40px';
+            reportContainer.style.background = '#ffffff';
+            reportContainer.style.direction = 'rtl';
+            reportContainer.style.fontFamily = "'Cairo', sans-serif";
+            reportContainer.style.color = '#334155';
+
+            reportContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-b: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 48px; height: 48px; background: #4f46e5; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">A</div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e293b;">أكاديمية أبيكس التعليمية</h2>
+                            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">تقرير ومخرجات النظام الموحد لإدارة السنتر</p>
+                        </div>
+                    </div>
+                    <div style="text-align: left;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #4f46e5;">${title}</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 10px; color: #64748b; font-family: monospace;">التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 11px;">
+                    <thead>
+                        <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #cbd5e1;">
+                            ${headers.map(h => `<th style="padding: 10px; font-weight: 700; border-bottom: 2px solid #cbd5e1;">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row, idx) => `
+                            <tr style="border-bottom: 1px solid #f1f5f9; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                                ${row.map(val => `<td style="padding: 10px; color: #334155;">${val}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div style="margin-top: 40px; border-t: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+                    <span>أكاديمية أبيكس v121</span>
+                    <span>توقيع مسؤول المركز: ____________________</span>
+                </div>
+            `;
+
+            document.body.appendChild(reportContainer);
+
+            try {
+                const canvas = await html2canvas(reportContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210;
+                const pageHeight = 297;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                pdf.save(filename);
+                this.showToast('تم تصدير وحفظ التقرير بصيغة PDF بنجاح', 'success');
+            } catch (e) {
+                console.error(e);
+                this.showToast('تعذر إنشاء ملف الـ PDF حالياً', 'error');
+            } finally {
+                document.body.removeChild(reportContainer);
+            }
+        },
+
+        triggerUpdate() {
+            this.showToast('جاري تحديث النظام لنسخة v121 المستقرة...', 'info');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         }
-    },
+    });
+});
 
-    exportToCSV(data, filename, headers) {
-        Helpers.exportCSV(data, filename, headers);
+// خدمات طباعة الكارنيهات عالية الدقة (المرحلة الثالثة والخامسة)
+window._apexCards = {
+    generateCardQR(code) {
+        const container = document.getElementById('qrcode-card-box');
+        if (!container) return;
+        container.innerHTML = '';
+        new QRCode(container, {
+            text: code,
+            width: 45,
+            height: 45,
+            correctLevel: QRCode.CorrectLevel.H
+        });
     },
+    async downloadSingleCard(student, template) {
+        const area = document.getElementById('card-preview-area');
+        if (!area) return;
+        
+        const imgs = area.querySelectorAll('img');
+        await Promise.all(Array.from(imgs).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+        }));
 
-    printTable(title, headers, rows) {
-        Helpers.printTable(title, headers, rows);
+        const canvas = await html2canvas(area, {
+            scale: 3,
+            useCORS: true,
+            allowTaint: true
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: [85.6, 54]
+        });
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
+        pdf.save(`${student.name}_Card.pdf`);
+        
+        const store = Alpine.store('apex');
+        store.markAsPrinted([student.id]);
+    },
+    async printAllCards(students, template) {
+        const store = Alpine.store('apex');
+        const filtered = store.getFilteredCards();
+        if (filtered.length === 0) {
+            store.showToast('لا يوجد طلاب ضمن التصفية المحددة لطباعة كارنيهاتهم', 'warning');
+            return;
+        }
+
+        store.showToast('جاري إنشاء وتحضير الكارنيهات للطباعة المجمعة في ملف واحد...', 'info');
+
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '20px';
+        document.body.appendChild(container);
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: [85.6, 54]
+        });
+
+        for (let i = 0; i < filtered.length; i++) {
+            const s = filtered[i];
+            const cardEl = document.createElement('div');
+            cardEl.style.width = '340px';
+            cardEl.style.height = '210px';
+            cardEl.style.position = 'relative';
+            cardEl.style.borderRadius = '16px';
+            cardEl.style.overflow = 'hidden';
+            cardEl.style.display = 'flex';
+            cardEl.style.flexDirection = 'column';
+            cardEl.style.justifyContent = 'space-between';
+            cardEl.style.padding = '16px';
+            cardEl.style.boxSizing = 'border-box';
+            cardEl.style.fontFamily = "'Cairo', sans-serif";
+            cardEl.style.direction = 'rtl';
+            cardEl.style.background = template ? `url(${template})` : 'linear-gradient(135deg, #4f46e5, #0ea5e9)';
+            cardEl.style.backgroundSize = 'cover';
+            cardEl.style.backgroundPosition = 'center';
+            cardEl.style.color = 'white';
+
+            cardEl.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="text-align: right; font-family: 'Cairo', sans-serif;">
+                        <h5 style="margin: 0; font-size: 14px; font-weight: 800; color: white;">${s.name}</h5>
+                        <p style="margin: 2px 0 0 0; font-size: 10px; opacity: 0.9; color: white;">${s.year}</p>
+                        <p style="margin: 2px 0 0 0; font-size: 10px; opacity: 0.9; font-weight: bold; color: white;">${s.group}</p>
+                        <p style="margin: 2px 0 0 0; font-size: 9px; opacity: 0.85; color: white;">هاتف: ${s.phone || '-'}</p>
+                    </div>
+                    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <img src="${s.image || 'https://via.placeholder.com/50'}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <div class="temp-qr" style="background: white; padding: 4px; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: end; font-size: 9px; font-family: monospace; opacity: 0.9; font-weight: bold; color: white;">
+                    <span>${s.code}</span>
+                    <span style="font-family: 'Cairo', sans-serif;">أكاديمية أبيكس التعليمية</span>
+                </div>
+            `;
+
+            container.appendChild(cardEl);
+
+            const qrEl = cardEl.querySelector('.temp-qr');
+            new QRCode(qrEl, {
+                text: s.code,
+                width: 45,
+                height: 45,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            await new Promise(r => setTimeout(r, 150));
+
+            const imgs = cardEl.querySelectorAll('img');
+            await Promise.all(Array.from(imgs).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+            }));
+
+            const canvas = await html2canvas(cardEl, {
+                scale: 3,
+                useCORS: true,
+                allowTaint: true
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            if (i > 0) {
+                pdf.addPage([85.6, 54], 'landscape');
+            }
+            pdf.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
+        }
+
+        pdf.save('Cards.pdf');
+        document.body.removeChild(container);
+
+        const ids = filtered.map(s => s.id);
+        store.markAsPrinted(ids);
+        store.showToast('تم حفظ ملف الكارنيهات بنجاح وتحديث الحالات تلقائياً!', 'success');
     }
 };
-
-/* ==========================================================================
-   7. تهيئة وإطلاق تطبيق جافا سكريبت (Application Initializer)
-   ========================================================================== */
-document.addEventListener('alpine:init', () => {
-    // تسجيل المتجر البرمجي للتطبيق بشكل فوري ومباشر
-    Alpine.store('apex', window.ApexStore);
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-    console.log("Apex Academy Engine Core v120 Standalone Initialized successfully.");
-});
