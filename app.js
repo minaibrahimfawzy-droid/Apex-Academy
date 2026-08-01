@@ -34,6 +34,7 @@ document.addEventListener('alpine:init', () => {
             currency: 'ج.م'
         },
         cardTemplate: '',
+        archivedYears: [],
         
         // كائنات التتبع المؤقتة ومسح الـ QR
         activeStudentDetails: null,
@@ -45,19 +46,19 @@ document.addEventListener('alpine:init', () => {
         remoteLockMessage: '',
         licenseUrl: 'https://raw.githubusercontent.com/username/repo/main/license.json', 
         
-        // متغيرات تتبع الفترة التجريبية وكود التفعيل الرياضي المطور (المرحلة الرابعة عشر)
-        trialDaysDuration: 7, // مدة الفترة التجريبية بالأيام
+        // تتبع الفترة التجريبية وكود التفعيل الرياضي المطور
+        trialDaysDuration: 7, 
         isTrialExpired: false,
-        isActivated: false, // حالة التفعيل الدائم مدى الحياة
+        isActivated: false, // حالة التفعيل والترخيص الأولي
         deviceCode: '', // كود الجهاز المثبت محلياً
         activationInput: '', // حقل إدخال كود العميل
         trialRemainingText: '',
         trialTimeCreated: null,
         
         // فلترة طباعة الكارنيهات
-        cardPrintFilter: 'all', // 'all', 'printed', 'not_printed'
+        cardPrintFilter: 'all', 
         
-        // إدارة التقارير التفاعلية (المرحلة السابعة)
+        // إدارة التقارير التفاعلية
         activeReportId: 'students',
         reportsList: [
             { id: 'students', name: '👥 تقرير الطلاب والمديونيات' },
@@ -86,7 +87,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         initApp() {
-            // تحميل البيانات بشكل آمن ومستمر من LocalStorage
+            // تحميل البيانات بشكل آمن من LocalStorage
             this.students = this.loadFromStorage('apex_students', []);
             this.groups = this.loadFromStorage('apex_groups', []);
             this.teachers = this.loadFromStorage('apex_teachers', []);
@@ -97,17 +98,13 @@ document.addEventListener('alpine:init', () => {
             this.financeRecords = this.loadFromStorage('apex_finance_records', []);
             this.logs = this.loadFromStorage('apex_logs', []);
             this.settings = this.loadFromStorage('apex_settings', this.settings);
+            this.archivedYears = this.loadFromStorage('apex_archived_years', []);
             this.cardTemplate = localStorage.getItem('apex_card_template') || '';
             
-            // قفل التطبيق وضبط الـ Password
             const passStatus = localStorage.getItem('apex_is_unlocked');
-            if (passStatus === 'true') {
-                this.isUnlocked = true;
-            } else {
-                this.isUnlocked = false;
-            }
+            this.isUnlocked = passStatus === 'true';
 
-            // توليد كود جهاز ثابت وعشوائي بين (1000 و 9999) عند تشغيل البرنامج لأول مرة
+            // توليد كود جهاز فريد وثابت عند تشغيل البرنامج لأول مرة
             let savedDeviceCode = localStorage.getItem('apex_device_id');
             if (!savedDeviceCode) {
                 savedDeviceCode = String(Math.floor(1000 + Math.random() * 9000));
@@ -115,30 +112,22 @@ document.addEventListener('alpine:init', () => {
             }
             this.deviceCode = savedDeviceCode;
 
-            // تم إيقاف توليد البيانات التجريبية الافتراضية
-            /*
-            if (this.students.length === 0 && this.groups.length === 0 && this.years.length === 0) {
-                this.seedInitialData();
-            }
-            */
-
-            // إظهار نافذة التحديث الجديد مرة واحدة فقط
             const viewed = localStorage.getItem('apex_version_changelog_viewed');
             if (viewed !== '121') {
                 this.showChangelogModal = true;
             }
 
-            this.addLog('تشغيل التطبيق', 'تم فتح نظام أكاديمية أبيكس المطور بنسخته المستقرة v121');
+            this.addLog('تشغيل التطبيق', 'تم فتح نظام أكاديمية أبيكس المطور v121');
             
-            // فحص ترخيص النسخة واستدعاء القفل التلقائي عن بعد
             this.checkRemoteLicense();
-
-            // فحص وتأمين الفترة التجريبية وكود التفعيل الرياضي أوفلاين
             this.checkTrialLicense();
-        },
 
-        seedInitialData() {
-            // دالة التوليد أصبحت فارغة لعدم إدخال أي أسماء غير مرغوبة تلقائياً
+            // تحديث العداد دورياً كل 30 ثانية في حال كان مفعل وغير منتهي
+            if (this.isActivated && !this.isTrialExpired) {
+                setInterval(() => {
+                    this.updateTrialCountdown();
+                }, 30000);
+            }
         },
 
         loadFromStorage(key, defaultValue) {
@@ -156,7 +145,7 @@ document.addEventListener('alpine:init', () => {
                 localStorage.setItem('apex_is_unlocked', 'true');
                 this.passwordError = false;
                 this.passwordInput = '';
-                this.showToast('مرحباً بك! تم فك قفل النظام بنجاح', 'success');
+                this.showToast('تم فك قفل النظام بنجاح', 'success');
             } else {
                 this.passwordError = true;
                 this.showToast('كلمة المرور خاطئة. يرجى إعادة المحاولة', 'error');
@@ -166,6 +155,54 @@ document.addEventListener('alpine:init', () => {
             this.isUnlocked = false;
             localStorage.setItem('apex_is_unlocked', 'false');
             this.showToast('تم تسجيل الخروج وقفل النظام بنجاح', 'info');
+        },
+
+        get dashboardStats() {
+            const studentsCount = this.students.length;
+            const groupsCount = this.groups.length;
+            const teachersCount = this.teachers.length;
+            const hallsCount = this.halls.length;
+            const yearsCount = this.years.length;
+            const attendanceCount = this.attendance.length;
+
+            let revenue = 0;
+            this.payments.forEach(p => revenue += Number(p.amount) || 0);
+
+            let expenses = 0;
+            this.financeRecords.filter(f => f.type === 'expense').forEach(f => expenses += Number(f.amount) || 0);
+
+            let totalRequired = 0;
+            this.students.forEach(s => {
+                totalRequired += Number(s.requiredAmount) || 0;
+            });
+            
+            const arrears = Math.max(0, totalRequired - revenue);
+            const balance = revenue - expenses;
+
+            return { studentsCount, groupsCount, teachersCount, hallsCount, yearsCount, attendanceCount, revenue, expenses, balance, arrears };
+        },
+
+        get last7DaysAttendance() {
+            const list = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toLocaleDateString('ar-EG');
+                const label = d.toLocaleDateString('ar-EG', { weekday: 'short' });
+                const count = this.attendance.filter(a => a.date === dateStr).length;
+                list.push({ date: dateStr, label, count });
+            }
+            return list;
+        },
+
+        get hallOccupancy() {
+            return this.halls.map(h => {
+                const groupsInHall = this.groups.filter(g => g.hallId === h.id || g.hall === h.name);
+                const count = groupsInHall.length;
+                const capacity = h.capacity || 50;
+                const pct = Math.min(100, Math.round((count / Math.max(1, capacity)) * 100));
+                return { name: h.name, count, capacity, pct };
+            });
         },
 
         get globalSearchResults() {
@@ -212,7 +249,6 @@ document.addEventListener('alpine:init', () => {
             }, 3000);
         },
 
-        // العمليات الخاصة بالطلاب
         getStudentStats(studentId) {
             const student = this.students.find(s => s.id === studentId);
             if (!student) return { isLate: false, remaining: 0, paid: 0, ratio: 0 };
@@ -232,7 +268,6 @@ document.addEventListener('alpine:init', () => {
 
         saveStudent(data, id) {
             if (id) {
-                // تعديل ملف طالب
                 const idx = this.students.findIndex(s => s.id === id);
                 if (idx !== -1) {
                     const group = this.groups.find(g => g.name === data.group);
@@ -246,7 +281,6 @@ document.addEventListener('alpine:init', () => {
                     this.showToast('تم تعديل بيانات الطالب بنجاح', 'success');
                 }
             } else {
-                // تسجيل طالب جديد
                 const stCode = 'ST-' + Math.floor(1000 + Math.random() * 9000);
                 const group = this.groups.find(g => g.name === data.group);
                 const newStudent = {
@@ -281,7 +315,44 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // العمليات الخاصة بالمجموعات
+        recordAttendanceByCode(code) {
+            const student = this.students.find(s => s.code === code);
+            if (!student) {
+                return { success: false, message: 'عذراً، كود الطالب غير مسجل في النظام ❌' };
+            }
+
+            const todayStr = new Date().toLocaleDateString('ar-EG');
+            const alreadyRecorded = this.attendance.some(a => a.studentId === student.id && a.date === todayStr);
+
+            if (alreadyRecorded) {
+                return { success: false, message: 'تم تسجيل حضور هذا الطالب مسبقاً اليوم ⚠️', student };
+            }
+
+            const newAtt = {
+                id: Date.now(),
+                studentId: student.id,
+                name: student.name,
+                code: student.code,
+                group: student.group,
+                date: todayStr,
+                time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            this.attendance.unshift(newAtt);
+            this.saveToStorage('apex_attendance', this.attendance);
+            this.addLog('تسجيل حضور', `حضر الطالب ${student.name} في المجموعة ${student.group}`);
+            
+            const stats = this.getStudentStats(student.id);
+
+            return {
+                success: true,
+                message: 'تم تسجيل الحضور بنجاح ✅',
+                student,
+                remaining: stats.remaining,
+                time: newAtt.time
+            };
+        },
+
         getGroupStats(group) {
             const groupStudents = this.students.filter(s => s.group === group.name);
             const studentCount = groupStudents.length;
@@ -292,7 +363,6 @@ document.addEventListener('alpine:init', () => {
                 revenue += stPayments.reduce((sum, p) => sum + Number(p.amount), 0);
             });
 
-            // معدلات الحضور والغياب
             const groupAttendanceCount = this.attendance.filter(a => a.group === group.name).length;
             const uniqueDates = [...new Set(this.attendance.filter(a => a.group === group.name).map(a => a.date))].length;
             const maxPossibleAttendance = studentCount * Math.max(1, uniqueDates);
@@ -324,7 +394,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteGroup(id) {
             if (confirm('هل أنت متأكد من حذف هذه المجموعة؟ لن يتم حذف الطلاب المرتبطين بها.')) {
-                const g = this.groups.find(gr => gr.id !== id);
+                const g = this.groups.find(gr => gr.id === id);
                 this.groups = this.groups.filter(gr => gr.id !== id);
                 this.saveToStorage('apex_groups', this.groups);
                 this.addLog('حذف مجموعة', `تم حذف المجموعة ${g ? g.name : ''}`);
@@ -332,7 +402,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // العمليات والتحصيلات المالية
         savePayment(data) {
             let studentId = data.studentId;
             let amount = Number(data.amount);
@@ -362,7 +431,6 @@ document.addEventListener('alpine:init', () => {
             this.payments.unshift(newPayment);
             this.saveToStorage('apex_payments', this.payments);
 
-            // ترحيلها للمعاملات اليومية للصندوق
             const newTransaction = {
                 id: Date.now() + 1,
                 type: 'income',
@@ -395,7 +463,6 @@ document.addEventListener('alpine:init', () => {
             this.showToast('تم حفظ المعاملة المالية بنجاح', 'success');
         },
 
-        // إدارة المعلمين والنسب
         getTeacherStats(t) {
             const tGroups = this.groups.filter(g => g.teacherId === t.id || g.teacher === t.name);
             const groupCount = tGroups.length;
@@ -440,7 +507,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // إدارة القاعات والاستيعاب
         getHallStats(h) {
             const hGroups = this.groups.filter(g => g.hallId === h.id || g.hall === h.name);
             const groupCount = hGroups.length;
@@ -480,7 +546,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteHall(id) {
             if (confirm('هل أنت متأكد من حذف هذه القاعة؟')) {
-                const h = this.halls.find(ha => ha.id !== id);
+                const h = this.halls.find(ha => ha.id === id);
                 this.halls = this.halls.filter(ha => ha.id !== id);
                 this.saveToStorage('apex_halls', this.halls);
                 this.addLog('حذف قاعة', `تم حذف القاعة ${h ? h.name : ''}`);
@@ -488,7 +554,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // إدارة السنوات الأكاديمية
         saveYear(data, id) {
             if (id) {
                 const idx = this.years.findIndex(y => y.id === id);
@@ -512,7 +577,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteYear(id) {
             if (confirm('هل أنت متأكد من حذف هذه السنة الدراسية؟')) {
-                const y = this.years.find(ye => ye.id !== id);
+                const y = this.years.find(ye => ye.id === id);
                 this.years = this.years.filter(ye => ye.id !== id);
                 this.saveToStorage('apex_years', this.years);
                 this.addLog('حذف سنة دراسية', `تم حذف المرحلة ${y ? y.name : ''}`);
@@ -520,7 +585,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // دالة الفحص السحابي والتحقق من الترخيص عن بعد
         async checkRemoteLicense() {
             const localLockStatus = localStorage.getItem('apex_remote_locked');
             if (localLockStatus === 'true') {
@@ -550,115 +614,122 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // مسح كل شيء وإعادة ضبط المصنع الآمنة للنظام (المرحلة الحادية عشرة المحدثة)
-        clearAllData() {
-            if (confirm('⚠️ تحذير شديد الخطورة: سيتم مسح كافة البيانات المسجلة بالبرنامج (الطلاب، المجموعات، الحضور، المالية، الأرشيف السنوي، والإعدادات) نهائياً ولا يمكن التراجع عن هذا الإجراء! هل تريد الاستمرار بالفعل؟')) {
-                
-                const passwordText = prompt('الرجاء كتابة كلمة مرور النظام الحالية لتأكيد مسح كل شيء:');
-                const correctPass = this.settings.password || '1234';
-                
-                if (passwordText === correctPass) {
-                    localStorage.removeItem('apex_students');
-                    localStorage.removeItem('apex_groups');
-                    localStorage.removeItem('apex_teachers');
-                    localStorage.removeItem('apex_halls');
-                    localStorage.removeItem('apex_years');
-                    localStorage.removeItem('apex_attendance');
-                    localStorage.removeItem('apex_payments');
-                    localStorage.removeItem('apex_finance_records');
-                    localStorage.removeItem('apex_logs');
-                    localStorage.removeItem('apex_settings');
-                    localStorage.removeItem('apex_archived_years');
-                    localStorage.removeItem('apex_card_template');
-                    localStorage.removeItem('apex_is_unlocked');
-                    localStorage.removeItem('apex_remote_locked');
-                    localStorage.removeItem('apex_remote_lock_msg');
-                    localStorage.removeItem('apex_trial_start');
-                    localStorage.removeItem('apex_trial_last_active');
-                    localStorage.removeItem('apex_trial_expired_flag');
-                    localStorage.removeItem('apex_is_activated');
-                    localStorage.removeItem('apex_device_id');
-                    
-                    this.showToast('تم مسح وإعادة تهيئة النظام بنجاح، جاري إعادة التشغيل...', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1200);
-                } else {
-                    this.showToast('فشل التحقق: كلمة المرور غير صحيحة، تم إلغاء عملية المسح', 'error');
-                }
-            }
-        },
-
-        // فحص وتأمين الفترة التجريبية أوفلاين مع كشف التلاعب بالساعة (المرحلة الرابعة عشر)
+        // فحص وتأمين الفترة التجريبية وكشف التلاعب بالساعة والمسح التلقائي الكامل للبيانات
         checkTrialLicense() {
             const now = Date.now();
             
-            // فحص حالة التفعيل الفعلي مدى الحياة أولاً لتخطي أي قيود تجريبية
+            // 1. فحص راية انتهاء التجربة المخزنة في النظام أولاً لقفل النظام ومسح البيانات
+            const expiredFlag = localStorage.getItem('apex_trial_expired_flag');
+            if (expiredFlag === 'true') {
+                this.wipeAndExpire();
+                return;
+            }
+
+            // 2. التحقق من حالة التفعيل بكود الهوية الفريد
             const activeFlag = localStorage.getItem('apex_is_activated');
             if (activeFlag === 'true') {
                 this.isActivated = true;
-                this.isTrialExpired = false;
-                return;
-            }
-
-            const trialStart = localStorage.getItem('apex_trial_start');
-            const lastActive = Number(localStorage.getItem('apex_trial_last_active')) || 0;
-            const durationMs = this.trialDaysDuration * 24 * 60 * 60 * 1000;
-
-            if (!trialStart) {
-                localStorage.setItem('apex_trial_start', String(now));
-                localStorage.setItem('apex_trial_last_active', String(now));
-                this.trialTimeCreated = now;
-            } else {
-                this.trialTimeCreated = Number(trialStart);
                 
-                // كشف تلاعب وقت ساعة كمبيوتر السنتر للوراء
-                if (now < lastActive) {
-                    this.isTrialExpired = true;
-                    this.trialRemainingText = "⚠️ تم كشف تلاعب في ساعة وتاريخ الجهاز! تم قفل النظام لحماية التراخيص.";
-                    localStorage.setItem('apex_trial_expired_flag', 'true');
-                    return;
+                const trialStart = localStorage.getItem('apex_trial_start');
+                const lastActive = Number(localStorage.getItem('apex_trial_last_active')) || 0;
+                const durationMs = this.trialDaysDuration * 24 * 60 * 60 * 1000;
+
+                if (!trialStart) {
+                    localStorage.setItem('apex_trial_start', String(now));
+                    localStorage.setItem('apex_trial_last_active', String(now));
+                    this.trialTimeCreated = now;
+                } else {
+                    this.trialTimeCreated = Number(trialStart);
+                    
+                    // كشف تلاعب وقت ساعة كمبيوتر السنتر للوراء لمنع تمديد المدة يدوياً
+                    if (now < lastActive) {
+                        this.wipeAndExpire();
+                        return;
+                    }
+                    localStorage.setItem('apex_trial_last_active', String(now));
                 }
-                localStorage.setItem('apex_trial_last_active', String(now));
-            }
 
-            const expiredFlag = localStorage.getItem('apex_trial_expired_flag');
-            if (expiredFlag === 'true') {
-                this.isTrialExpired = true;
-                this.trialRemainingText = "❌ انتهت الفترة التجريبية المجانية المحددة للبرنامج (7 أيام). يرجى التفعيل لفتح النظام.";
-                return;
-            }
-
-            const timeElapsed = now - this.trialTimeCreated;
-            const timeRemaining = durationMs - timeElapsed;
-
-            if (timeRemaining <= 0) {
-                this.isTrialExpired = true;
-                this.trialRemainingText = "❌ انتهت الفترة التجريبية المجانية المحددة للبرنامج (7 أيام). يرجى التفعيل لفتح النظام.";
-                localStorage.setItem('apex_trial_expired_flag', 'true');
+                const timeElapsed = now - this.trialTimeCreated;
+                if (timeElapsed >= durationMs) {
+                    this.wipeAndExpire();
+                } else {
+                    this.isTrialExpired = false;
+                    this.updateTrialCountdown();
+                }
             } else {
-                const daysLeft = Math.floor(timeRemaining / (24 * 60 * 60 * 1000));
-                const hoursLeft = Math.floor((timeRemaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                this.trialRemainingText = `⏳ إصدار تجريبي: متبقي ${daysLeft} يوم و ${hoursLeft} ساعة على انتهاء الفترة التجريبية المجانية للسنتر.`;
+                this.isActivated = false;
+                this.isTrialExpired = false;
             }
         },
 
-        // دالة تفعيل البرنامج برمجياً بالمعادلة الرياضية السرية (كود الجهاز × 7) - مطلب المرحلة 13 و 14
+        // دالة تحديث عداد الأيام والساعات التجريبية المتبقية بشكل حي
+        updateTrialCountdown() {
+            if (!this.isActivated || this.isTrialExpired) return;
+            const start = Number(localStorage.getItem('apex_trial_start')) || Date.now();
+            const duration = this.trialDaysDuration * 24 * 60 * 60 * 1000;
+            const elapsed = Date.now() - start;
+            const remaining = duration - elapsed;
+
+            if (remaining <= 0) {
+                this.wipeAndExpire();
+            } else {
+                const daysLeft = Math.floor(remaining / (24 * 60 * 60 * 1000));
+                const hoursLeft = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                const minutesLeft = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+                this.trialRemainingText = `⏳ متبقي على انتهاء الفترة التجريبية: ${daysLeft} يوم و ${hoursLeft} ساعة و ${minutesLeft} دقيقة.`;
+            }
+        },
+
+        // دالة مسح كافة البيانات بشكل كامل وتلقائي وقفل البرنامج للأبد
+        wipeAndExpire() {
+            // مسح المصفوفات النشطة من الذاكرة العشوائية فوراً لحظر استعراضها
+            this.students = [];
+            this.groups = [];
+            this.teachers = [];
+            this.halls = [];
+            this.years = [];
+            this.attendance = [];
+            this.payments = [];
+            this.financeRecords = [];
+            this.logs = [];
+            this.archivedYears = [];
+            this.cardTemplate = '';
+
+            // مسح وحذف كافة السجلات وملفات التخزين المحلي للمتصفح تماماً
+            const keysToClear = [
+                'apex_students', 'apex_groups', 'apex_teachers', 'apex_halls', 
+                'apex_years', 'apex_attendance', 'apex_payments', 'apex_finance_records', 
+                'apex_logs', 'apex_settings', 'apex_archived_years', 'apex_card_template', 
+                'apex_is_unlocked', 'apex_is_activated', 'apex_trial_start', 'apex_trial_last_active'
+            ];
+            keysToClear.forEach(key => localStorage.removeItem(key));
+
+            // تثبيت راية الإغلاق التام والمسح
+            localStorage.setItem('apex_trial_expired_flag', 'true');
+            this.isTrialExpired = true;
+            this.isActivated = false;
+            this.trialRemainingText = 'لقد تم انتهاء الفترة التجريبية لشراء نسخة من البرنامج مفعلة رجاء التواصل مع المطور 01033773242';
+        },
+
+        // دالة تفعيل البرنامج بالمعادلة الرياضية السرية (كود الجهاز × 7)
         activateApp() {
             const correctKey = Number(this.deviceCode) * 7;
             if (Number(this.activationInput.trim()) === correctKey) {
                 localStorage.setItem('apex_is_activated', 'true');
+                localStorage.setItem('apex_trial_start', String(Date.now()));
+                localStorage.setItem('apex_trial_last_active', String(Date.now()));
+                localStorage.removeItem('apex_trial_expired_flag');
+                
                 this.isActivated = true;
                 this.isTrialExpired = false;
-                this.showToast('تم تفعيل وترخيص برنامج الأكاديمية بنجاح مدى الحياة! ✅', 'success');
+                this.activationInput = '';
+                this.showToast('تم تفعيل الفترة التجريبية بنجاح لمدة أسبوع كامل! ✅', 'success');
                 setTimeout(() => window.location.reload(), 1100);
             } else {
                 this.showToast('كود التفعيل غير صحيح! يرجى مراجعة مطور النظام ❌', 'error');
             }
         },
 
-        // ترحيل الأرشيف السنوي مغلق ومستقل
         confirmArchiveYear() {
             if (!this.archiveYearName.trim()) {
                 this.showToast('يرجى تحديد اسم السنة أو الدفعة للأرشفة', 'warning');
@@ -727,7 +798,29 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // دالة قراءة واستيراد الملف المختار مباشرة للباك آب (التعديل الحادي عشر المطور)
+        exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                students: this.students,
+                groups: this.groups,
+                teachers: this.teachers,
+                halls: this.halls,
+                years: this.years,
+                attendance: this.attendance,
+                payments: this.payments,
+                financeRecords: this.financeRecords,
+                logs: this.logs,
+                settings: this.settings,
+                archivedYears: this.archivedYears
+            }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Apex_Backup_${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            this.showToast('تم تصدير النسخة الاحتياطية بنجاح ✅', 'success');
+        },
+
         importDataDirect(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -761,13 +854,31 @@ document.addEventListener('alpine:init', () => {
             reader.readAsText(file);
         },
 
-        // طباعة جداول وكشوف التقارير والتحصيل بنظام html2pdf المستقر كلياً (تم الإصلاح)
+        exportToCSV(rows, filename = 'export', headers = []) {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            if (headers.length) {
+                csvContent += headers.join(",") + "\r\n";
+            }
+            rows.forEach(row => {
+                const r = row.map(v => typeof v === 'string' ? `"${v.replace(/"/g, '""')}"` : v);
+                csvContent += r.join(",") + "\r\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${filename}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        },
+
+        // طباعة جداول وكشوف التقارير والتحصيل بنظام html2pdf المستقر كلياً
         async printTable(title, headers, rows, filename = 'Students_Report.pdf') {
             const store = this;
             store.showToast('جاري تحضير ملف الطباعة...', 'info');
 
             const reportContainer = document.createElement('div');
-            reportContainer.style.width = '170mm'; // يناسب صفحة A4 تماماً بدون تداخل
+            reportContainer.style.width = '170mm'; 
             reportContainer.style.padding = '10mm';
             reportContainer.style.background = '#ffffff';
             reportContainer.style.direction = 'rtl';
@@ -775,7 +886,7 @@ document.addEventListener('alpine:init', () => {
             reportContainer.style.color = '#334155';
 
             reportContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-b: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px; direction: rtl;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px; direction: rtl;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold;">A</div>
                         <div style="text-align: right;">
@@ -833,7 +944,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // فحص وتصفية الكارنيهات بذكاء لحمايتها تماماً ضد القيم الفارغة والـ Null-Pointer Crashes (تم الإصلاح والتحصين الشامل للمتغيرات)
         getFilteredCards() {
             return this.students.filter(s => {
                 const q = this.searchTerms.cards.toLowerCase().trim();
@@ -854,34 +964,29 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        // دالة وسم الطلاب كـ "مطبوعين" بعد نجاح تصدير الـ PDF وإجبار المتصفح على تحديث الواجهة والـ Badges فوراً (تم الإصلاح)
         markAsPrinted(ids) {
             this.students.forEach(s => {
                 if (ids.includes(s.id)) {
                     s.printedState = 'printed';
                 }
             });
-            // تفعيل تفاعلية الأري المشفر لتقرأه واجهة Alpine.js في ثانية وتحدّث الشاشة والـ Badges تلقائياً
             this.students = [...this.students];
             this.saveToStorage('apex_students', this.students);
         },
 
-        // زر مسح وإعادة تعيين حالة الطباعة للجميع مع تحديث الواجهة اللحظي (تم الإصلاح والترقية لتعمل فورياً على الشاشة)
         resetPrintStatus() {
             if (confirm('هل أنت متأكد من إعادة تعيين حالة الطباعة لكافة الطلاب لتبدو لم تتم الطباعة؟')) {
                 this.students.forEach(s => s.printedState = 'not_printed');
-                // تفعيل التفاعلية اللحظية لتحديث الكروت على الشاشة فوراّ وحل مشكلة التجمد
                 this.students = [...this.students];
                 this.saveToStorage('apex_students', this.students);
                 this.showToast('تم إعادة تعيين حالة طباعة الكارنيهات لجميع الطلاب بنجاح ✅', 'success');
             }
         },
 
-        // رفع وحفظ قالب الكارنيه وتعديل المرجع لمنع مشكلة التجمد أو عدم ظهور الخلفية (تم الإصلاح الجذري الفوري - المرحلة 13)
         uploadCardTemplate(event) {
             const file = event.target.files[0];
             if (!file) return;
-            const store = this; // حفظ المرجع لربطه بالستور البرمجي مباشرة
+            const store = this;
             const reader = new FileReader();
             reader.onload = (e) => {
                 store.cardTemplate = e.target.result;
@@ -900,7 +1005,6 @@ document.addEventListener('alpine:init', () => {
     });
 });
 
-// خدمات طباعة الكارنيهات المجمعة والفردية وملصقات الترخيص عبر html2pdf لمنع أي خطأ وتوفير تصدير فائق الدقة (تم الإصلاح الشامل للمرحلة 13)
 window._apexCards = {
     generateCardQR(code) {
         const container = document.getElementById('qrcode-card-box');
@@ -922,8 +1026,8 @@ window._apexCards = {
         const opt = {
             margin: 0,
             filename: `${student.name}_Card.pdf`,
-            image: { type: 'jpeg', quality: 1.0 }, // دقة وجودة كاملة
-            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // Retina Scale لجودة ممتازة
+            image: { type: 'jpeg', quality: 1.0 },
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true },
             jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
         };
         
@@ -934,19 +1038,16 @@ window._apexCards = {
             console.error(err);
         });
     },
-    // دالة التنزيل الفردي المحسنة لتقوم بإخفاء شارات حالة الطباعة من ملف الكارت المطبوع ليكون نظيفاً ومهنياً (تم الإصلاح بناءً على طلبك)
     async downloadCardElement(element, filename, studentId) {
         const store = Alpine.store('apex');
         store.showToast('جاري تحضير الكارت للتحميل الحجمي...', 'info');
         
-        // إخفاء مؤقت لأزرار التحكم والشارات الإدارية أثناء التقاط الصورة وحفظ الملف
         const buttons = element.querySelector('.action-buttons-wrap');
         const badge = element.querySelector('.print-status-badge');
         
         if (buttons) buttons.style.display = 'none';
         if (badge) badge.style.display = 'none';
 
-        // إزالة ظلال وحدود الكارت الخارجية مؤقتاً لمنع تداخل المقاسات والصفحات الفارغة (تم الإصلاح الجذري)
         const originalShadow = element.style.boxShadow;
         const originalBorder = element.style.border;
         element.style.boxShadow = 'none';
@@ -976,12 +1077,10 @@ window._apexCards = {
             store.showToast('حدث خطأ أثناء التنزيل الفردي', 'error');
         });
     },
-    // دالة تصدير ملصق الـ QR المخصص فقط بمقاس 70mm x 50mm المذهل دون التصميم (مطلب جديد ومطور - المرحلة 13)
     async downloadQRTag(student) {
         const store = Alpine.store('apex');
         store.showToast('جاري تصدير ملصق الـ QR الفني الخاص بالطالب...', 'info');
 
-        // بناء حاوية ملصق مخصصة في الـ DOM
         const tagEl = document.createElement('div');
         tagEl.style.width = '70mm';
         tagEl.style.height = '50mm';
@@ -1001,9 +1100,7 @@ window._apexCards = {
         tagEl.innerHTML = `
             <div style="font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">أكاديمية أبيكس التعليمية</div>
             <div style="font-size: 10px; font-weight: bold; color: #4f46e5; margin-bottom: 4px;">ملصق عضوية الطالب</div>
-            
             <div class="qr-tag-box" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: center;"></div>
-            
             <div style="font-size: 9px; font-weight: 800; color: #0f172a; line-height: 1.2; max-width: 100%; word-break: break-word;">${student.name}</div>
             <div style="font-size: 8px; font-family: monospace; font-weight: bold; color: #64748b; margin-top: 1px;">كود الطالب: ${student.code}</div>
         `;
@@ -1026,7 +1123,7 @@ window._apexCards = {
             margin: 0,
             filename: `${student.name}_QR_Tag.pdf`,
             image: { type: 'jpeg', quality: 1.0 },
-            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // جودة طباعة نقية للـ QR
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true },
             jsPDF: { unit: 'mm', format: [70, 50], orientation: 'landscape' }
         };
 
@@ -1039,7 +1136,6 @@ window._apexCards = {
             store.showToast('حدث خطأ أثناء تصدير الملصق', 'error');
         });
     },
-    // دالة تصدير الكروت المجمعة المحدثة تماماً والملغى منها شارة الطباعة الإدارية تلقائياً بجودة Retina فائقة
     async printAllCards(students, template) {
         const store = Alpine.store('apex');
         const filtered = store.getFilteredCards();
@@ -1066,14 +1162,13 @@ window._apexCards = {
             card.style.background = template ? `url(${template})` : 'linear-gradient(135deg, #4f46e5, #0ea5e9)';
             card.style.backgroundSize = 'cover';
             card.style.backgroundPosition = 'center';
-            card.style.color = 'white'; // تم الإصلاح الدقيق هنا ليطابق متغير حلقة الـ forEach بنجاح
+            card.style.color = 'white';
             card.style.direction = 'rtl';
             card.style.fontFamily = "'Cairo', sans-serif";
             if (idx < filtered.length - 1) {
                 card.style.pageBreakAfter = 'always';
             }
 
-            // تم الغاء كود ورسم شارة الطباعة من التمبلت تماماً ليبقى الكارت المطبوع نظيفاً ومهنياً وخالياً من العبارات الإدارية
             card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start; height: 100%;">
                     <div style="text-align: right; color: white;">
@@ -1113,7 +1208,7 @@ window._apexCards = {
             margin: 0,
             filename: 'Cards.pdf',
             image: { type: 'jpeg', quality: 1.0 },
-            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // جودة Retina طباعية فائقة وممتازة
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true },
             jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' },
             pagebreak: { mode: 'css' }
         };

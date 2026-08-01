@@ -21,7 +21,7 @@
     <!-- Html5QrcodeScanner -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
-    <!-- استدعاء ملفات التنسيق -->
+    <!-- استدعاء ملفات التنسيق الجانبية -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/forms.css">
@@ -51,46 +51,74 @@
 <body class="bg-slate-50 text-slate-800 antialiased font-semibold"
       x-data x-init="$store.apex.initApp()">
 
-<!-- شاشة قفل انتهاء الفترة التجريبية والمطالبة بكود التفعيل الرياضي (المطلب الجديد والمطور - المرحلة 14) -->
-<div x-show="$store.apex.isTrialExpired && !$store.apex.isActivated"
+<!-- الشاشة الأولى: شاشة طلب كود تفعيل الترخيص الأولي (Step 1) لتشغيل النسخة التجريبية -->
+<div x-show="!$store.apex.isActivated && !$store.apex.isTrialExpired"
      class="fixed inset-0 bg-slate-950/95 z-[99999999] flex items-center justify-center p-6 backdrop-blur-lg"
      x-cloak>
-    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl text-center space-y-6 border border-rose-100 animate-slide-up">
-        <div class="w-16 h-16 bg-rose-50 text-rose-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-md border border-rose-100">
-            <i class="fa-solid fa-hourglass-end animate-pulse"></i>
+    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl text-center space-y-6 border border-indigo-100 animate-slide-up">
+        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-md border border-indigo-100">
+            <i class="fa-solid fa-key animate-pulse"></i>
         </div>
         
         <div class="space-y-2">
-            <h3 class="font-extrabold text-rose-600 text-lg">انتهت الفترة التجريبية المجانية للبرنامج</h3>
-            <p class="text-slate-500 text-xs leading-relaxed" x-text="$store.apex.trialRemainingText"></p>
+            <h3 class="font-extrabold text-indigo-900 text-lg">تفعيل نسخة البرنامج التجريبية</h3>
+            <p class="text-slate-500 text-xs leading-relaxed">الرجاء تزويد المطور برقم كود جهازك الظاهر بالأسفل للحصول على رمز التفعيل والبدء في تشغيل الفترة التجريبية.</p>
         </div>
 
-        <!-- كود الجهاز والنموذج الرياضي التفاعلي -->
+        <!-- كود بصمة الجهاز للعميل -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1 font-mono text-xs">
-            <p class="text-slate-400 text-[10px]">الرجاء تزويد المطور بكود جهازك التالي لتلقي مفتاح التفعيل:</p>
-            <p class="text-lg font-extrabold text-slate-800" x-text="'Device ID: ' + $store.apex.deviceCode"></p>
+            <p class="text-slate-400 text-[10px]">كود الجهاز الخاص بك (Device ID):</p>
+            <p class="text-xl font-extrabold text-indigo-600 tracking-wider" x-text="$store.apex.deviceCode"></p>
         </div>
 
         <form @submit.prevent="$store.apex.activateApp()" class="space-y-4 text-right text-xs">
             <div>
-                <label class="block font-bold text-slate-600 mb-1">أدخل كود تفعيل الترخيص السري:</label>
-                <input type="text" x-model="$store.apex.activationInput" required placeholder="أدخل مفتاح التفعيل السداسي..."
+                <label class="block font-bold text-slate-600 mb-1">أدخل كود تفعيل الترخيص المستلم:</label>
+                <input type="text" x-model="$store.apex.activationInput" required placeholder="أدخل رمز التفعيل هنا..."
                        class="w-full px-4 py-3 text-center tracking-widest font-mono font-bold rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 transition-all">
             </div>
             <button type="submit"
                     class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/30">
-                تفعيل وترخيص النسخة مدى الحياة
+                تفعيل وتشغيل البرنامج الآن
             </button>
         </form>
 
         <div class="border-t pt-4 flex justify-between items-center text-[9px] text-slate-400 font-mono">
             <span>Apex Academy v121</span>
-            <span>ID: Trial_Lock</span>
+            <span>ID: Safe_License</span>
         </div>
     </div>
 </div>
 
-<!-- شاشة الحظر والقفل عن بعد التامة (تظهر في حال تفعيل وضع الـ Kill-Switch السحابي - التعديل الثاني عشر) -->
+<!-- الشاشة الثانية: شاشة انتهاء الفترة التجريبية والمسح التلقائي بعد 7 أيام (Step 2) -->
+<div x-show="$store.apex.isTrialExpired"
+     class="fixed inset-0 bg-slate-950/95 z-[99999999] flex items-center justify-center p-6 backdrop-blur-lg"
+     x-cloak>
+    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl text-center space-y-6 border border-rose-100 animate-slide-up">
+        <div class="w-16 h-16 bg-rose-50 text-rose-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-md border border-rose-100 animate-pulse">
+            <i class="fa-solid fa-hourglass-end"></i>
+        </div>
+        
+        <div class="space-y-4 text-right">
+            <h3 class="font-extrabold text-rose-600 text-lg text-center">انتهت الفترة التجريبية للبرنامج</h3>
+            <p class="text-slate-600 text-xs leading-relaxed text-center font-bold bg-rose-50 p-4 rounded-xl border border-rose-100" 
+               x-text="$store.apex.trialRemainingText"></p>
+        </div>
+
+        <!-- معلومات تواصل المطور للتفعيل الكامل ومنع التحايل -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1 font-mono text-xs">
+            <p class="text-slate-400 text-[10px]">كود جهازك الحالي لإصدار الترخيص الدائم:</p>
+            <p class="text-lg font-extrabold text-slate-800" x-text="$store.apex.deviceCode"></p>
+        </div>
+
+        <div class="border-t pt-4 flex justify-between items-center text-[9px] text-slate-400 font-mono">
+            <span>Apex Academy v121</span>
+            <span>ID: Wipe_Expired</span>
+        </div>
+    </div>
+</div>
+
+<!-- شاشة الحظر والقفل عن بعد التامة (تظهر في حال تفعيل وضع الـ Kill-Switch السحابي) -->
 <div x-show="$store.apex.isRemoteLocked"
      class="fixed inset-0 bg-slate-950/95 z-[9999999] flex items-center justify-center p-6 backdrop-blur-lg"
      x-cloak>
@@ -108,15 +136,16 @@
     </div>
 </div>
 
-<!-- شريط تنبيه الفترة التجريبية النشط في أعلى المتصفح (المرحلة الرابعة عشر) -->
-<template x-if="!$store.apex.isActivated && !$store.apex.isTrialExpired">
-    <div class="bg-amber-600 text-white px-4 py-2.5 text-xs font-bold text-center flex justify-center items-center gap-2 shadow-md no-print">
-        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+<!-- شريط تنبيه العداد التنازلي المباشر للـ 7 أيام في أعلى المتصفح -->
+<template x-if="$store.apex.isActivated && !$store.apex.isTrialExpired">
+    <div class="bg-indigo-600 text-white px-4 py-2.5 text-xs font-bold text-center flex justify-center items-center gap-2 shadow-md no-print">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span x-text="$store.apex.trialRemainingText"></span>
+        <span class="text-[10px] bg-indigo-700 px-2 py-0.5 rounded font-mono">Device ID: <span x-text="$store.apex.deviceCode"></span></span>
     </div>
 </template>
 
-<!-- 1. شاشة تسجيل الدخول المعتادة -->
+<!-- شاشة تسجيل الدخول المعتادة -->
 <div x-show="!$store.apex.isUnlocked"
      class="fixed inset-0 bg-slate-950/90 z-[999999] flex items-center justify-center p-4 backdrop-blur-md"
      x-cloak>
@@ -148,7 +177,7 @@
     </div>
 </div>
 
-<!-- 2. نافذة ترحيل الأرشيف السنوي -->
+<!-- نافذة ترحيل الأرشيف السنوي -->
 <div x-show="$store.apex.showArchiveModal"
      class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
      x-cloak>
@@ -175,41 +204,7 @@
     </div>
 </div>
 
-<!-- 3. نافذة سجل التحديثات v121 (المرحلة الثانية عشرة) -->
-<div x-show="$store.apex.showChangelogModal"
-     class="fixed inset-0 bg-slate-950/85 z-[999999] flex items-center justify-center p-4 backdrop-blur-md"
-     x-cloak>
-    <div class="bg-white max-w-lg w-full rounded-3xl p-6 shadow-2xl space-y-5 text-right border border-indigo-50">
-        <div class="flex items-center gap-3 border-b pb-3 border-slate-100">
-            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl">
-                <i class="fa-solid fa-gift"></i>
-            </div>
-            <div>
-                <h3 class="font-bold text-lg text-slate-900">أكاديمية أبيكس v121</h3>
-                <p class="text-[10px] text-slate-400">تحديث الاستقرار والأداء والترقية الكاملة للميزات</p>
-            </div>
-        </div>
-        
-        <div class="space-y-3 max-h-96 overflow-y-auto text-xs text-slate-600 leading-relaxed pl-1">
-            <h4 class="font-bold text-slate-800 text-sm">الجديد والمطور في هذا الإصدار:</h4>
-            <ul class="space-y-2 list-disc list-inside">
-                <li><span class="font-bold text-indigo-600">إصلاح كامل لنظام الـ PDF</span>: حل شامل لمشاكل طباعة الكارنيهات (فردية وجماعية) وحفظ تقارير الطلاب بدقة عالية وألوان متناسقة RTL.</li>
-                <li><span class="font-bold text-indigo-600">البحث الذكي الفوري</span>: تم تزويد جميع جداول الأقسام بمربعات بحث حية ذكية للوصول الفوري للمعلومة أثناء الكتابة.</li>
-                <li><span class="font-bold text-indigo-600">تطوير قسم الكارنيهات</span>: إضافة تصفية مخصصة للكارنيهات (المطبوعة / غير المطبوعة) مع عدادات إحصائية دقيقة وزر لإعادة التعيين.</li>
-                <li><span class="font-bold text-indigo-600">لوحة تحكم التحصيل المتطورة</span>: توفير كشف حساب تفصيلي مالي كامل لكل طالب وتصديره لملفات PDF أو Excel منفصلة.</li>
-                <li><span class="font-bold text-indigo-600">قسم التقارير المتقدمة الجديد كلياً</span>: مساحة موحدة لاستعراض تقارير تفصيلية عن الطلاب، الحضور والغياب، المجموعات، والمالية مع رسوم بيانية توضيحية.</li>
-                <li><span class="font-bold text-indigo-600">تحسينات في قارئ الـ QR</span>: توفير حماية كاملة ضد الحضور المكرر وقراءة الكود من الصور المرفوعة والملقوطة مباشرة.</li>
-            </ul>
-        </div>
-
-        <button @click="localStorage.setItem('apex_version_changelog_viewed', '121'); $store.apex.showChangelogModal = false;"
-                class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs transition-all shadow-lg shadow-indigo-600/20">
-            رائع، دعنا نبدأ العمل!
-        </button>
-    </div>
-</div>
-
-<!-- 4. شريط Toast الإشعاري -->
+<!-- شريط Toast الإشعاري -->
 <div x-show="$store.apex.toast.show"
      class="fixed bottom-6 right-6 z-[99999] p-4 rounded-2xl shadow-xl flex items-center gap-3 border text-xs max-w-sm animate-slide-up"
      :class="{
@@ -228,18 +223,6 @@
        }"></i>
     <span x-text="$store.apex.toast.message"></span>
 </div>
-
-<!-- 5. شريط التحديثات -->
-<template x-if="$store.apex.hasUpdate">
-    <div class="bg-rose-600 text-white px-4 py-3 text-xs font-bold text-center flex justify-center items-center gap-3 shadow-md z-50">
-        <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse-dot"></span>
-        <span>يتوفر تحديث جديد (الإصدار <span x-text="$store.apex.remoteVersion"></span>)!</span>
-        <button @click="$store.apex.triggerUpdate()"
-                class="bg-white text-rose-600 px-3 py-1 rounded text-[11px] font-extrabold hover:bg-rose-50 transition-all shadow-sm">
-            تحديث الآن
-        </button>
-    </div>
-</template>
 
 <div class="min-h-screen flex flex-col">
 
@@ -277,7 +260,7 @@
                             <i class="fa-solid fa-user-graduate"></i> الطلاب:
                         </p>
                         <template x-for="st in $store.apex.globalSearchResults.students" :key="st.id">
-                            <div @click="$store.apex.activeStudentDetails = st; $store.apex.generateDetailsQR(st.code); $store.apex.showGlobalSearchResults = false;"
+                            <div @click="$store.apex.activeStudentDetails = st; $store.apex.showGlobalSearchResults = false;"
                                  class="flex justify-between items-center p-1.5 hover:bg-slate-50 rounded cursor-pointer text-[11px]">
                                 <span class="font-bold" x-text="st.name"></span>
                                 <span class="text-slate-400 font-mono" x-text="st.code"></span>
@@ -308,9 +291,6 @@
                         </template>
                     </div>
                 </template>
-                <template x-if="!$store.apex.globalSearchResults.students.length && !$store.apex.globalSearchResults.teachers.length && !$store.apex.globalSearchResults.groups.length">
-                    <p class="text-[11px] text-slate-400 text-center py-2">لا توجد نتائج</p>
-                </template>
             </div>
         </div>
 
@@ -322,7 +302,7 @@
         </div>
     </header>
 
-    <!-- شريط التبويبات والملاحة الرئيسي المطور -->
+    <!-- شريط الملاحة الرئيسي المطور -->
     <nav class="bg-white border-b border-slate-200 px-4 py-3 flex overflow-x-auto space-x-reverse space-x-2.5 text-xs font-bold shadow-sm no-print">
         <button @click="$store.apex.currentTab = 'home'"
                 :class="$store.apex.currentTab === 'home' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
@@ -384,7 +364,6 @@
                 class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
             <i class="fa-solid fa-database ml-1"></i> النسخ الاحتياطي
         </button>
-        <!-- إدراج زر الإعدادات المفقود برمجياً في شريط التبويبات العلوي (تم الإصلاح) -->
         <button @click="$store.apex.currentTab = 'settings'"
                 :class="$store.apex.currentTab === 'settings' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
                 class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
@@ -463,8 +442,8 @@
                                     <span class="text-slate-400 font-mono text-[10px]"
                                           x-text="h.count + ' مجموعة / ' + h.capacity + ' سعة'"></span>
                                 </div>
-                                <div class="progress-bar">
-                                    <div class="bg-emerald-500 progress-fill" :style="'width: ' + h.pct + '%'"></div>
+                                <div class="progress-bar flex bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-emerald-500 h-full rounded-full transition-all" :style="'width: ' + h.pct + '%'"></div>
                                 </div>
                             </div>
                         </template>
@@ -515,7 +494,7 @@
             </div>
         </div>
 
-        <!-- 2. الطلاب والتحكم (مع البحث الذكي المخصص - المرحلة الرابعة) -->
+        <!-- 2. الطلاب والتحكم -->
         <div x-show="$store.apex.currentTab === 'students'"
              x-data="{ filterYear: '', filterGroup: '', filterLate: 'all' }"
              class="space-y-4" x-cloak>
@@ -544,26 +523,25 @@
                     </div>
                 </div>
 
-                <!-- البحث الذكي المخصص للطلاب (المرحلة الرابعة) -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                     <div class="relative">
                         <span class="absolute inset-y-0 right-3 flex items-center text-slate-400"><i class="fa-solid fa-search"></i></span>
                         <input type="text" x-model="$store.apex.searchTerms.students" placeholder="بحث ذكي بالاسم، الكود، الهاتف..."
                                class="w-full pl-3 pr-9 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
                     </div>
-                    <select x-model="filterYear" class="px-3 py-2 border rounded-xl focus:outline-none">
+                    <select x-model="filterYear" class="px-3 py-2 border rounded-xl focus:outline-none bg-white">
                         <option value="">كل السنوات الدراسية...</option>
                         <template x-for="y in $store.apex.years" :key="y.id">
                             <option :value="y.name" x-text="y.name"></option>
                         </template>
                     </select>
-                    <select x-model="filterGroup" class="px-3 py-2 border rounded-xl focus:outline-none">
+                    <select x-model="filterGroup" class="px-3 py-2 border rounded-xl focus:outline-none bg-white">
                         <option value="">كل المجموعات...</option>
                         <template x-for="g in $store.apex.groups" :key="g.id">
                             <option :value="g.name" x-text="g.name"></option>
                         </template>
                     </select>
-                    <select x-model="filterLate" class="px-3 py-2 border rounded-xl focus:outline-none">
+                    <select x-model="filterLate" class="px-3 py-2 border rounded-xl focus:outline-none bg-white">
                         <option value="all">كل الطلاب</option>
                         <option value="late">المتأخرون مالياً فقط</option>
                     </select>
@@ -609,20 +587,20 @@
                                 </td>
                                 <td class="p-3 font-mono text-slate-600" x-text="st.phone || '-'"></td>
                                 <td class="p-3">
-                                    <div class="space-y-1">
+                                    <div class="space-y-1 flex flex-col justify-end">
                                         <div class="flex justify-between text-[10px]">
-                                            <span class="text-emerald-600"
+                                            <span class="text-emerald-600 font-bold"
                                                   x-text="'مدفوع: ' + $store.apex.getStudentStats(st.id).paid"></span>
                                             <span class="text-rose-600 font-bold"
                                                   x-text="'متبقي: ' + $store.apex.getStudentStats(st.id).remaining"></span>
                                         </div>
-                                        <div class="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
-                                            <div class="bg-emerald-500 h-full"
+                                        <div class="w-24 bg-slate-100 h-1 rounded-full overflow-hidden flex">
+                                            <div class="bg-emerald-500 h-full rounded-full"
                                                  :style="'width: ' + $store.apex.getStudentStats(st.id).ratio + '%'"></div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="p-3">
+                                <td class="p-3 text-center">
                                     <div class="flex items-center justify-center gap-1.5">
                                         <button @click="$store.apex.activeStudentDetails = st;"
                                                 class="action-btn action-btn-view">
@@ -707,7 +685,7 @@
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">السنة الدراسية:</label>
                             <select x-model="year" required
-                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600 bg-white">
                                 <option value="">اختر المرحلة الدراسية...</option>
                                 <template x-for="y in $store.apex.years" :key="y.id">
                                     <option :value="y.name" x-text="y.name"></option>
@@ -717,7 +695,7 @@
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">المجموعة:</label>
                             <select x-model="group" required
-                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600 bg-white">
                                 <option value="">اختر المجموعة الدراسية...</option>
                                 <template x-for="g in $store.apex.groups.filter(gr => gr.year === year)" :key="g.id">
                                     <option :value="g.name" x-text="g.name + ' (' + g.price + ' ج.م)'"></option>
@@ -757,7 +735,7 @@
                     </div>
                 </form>
 
-                <!-- نجاح التسجيل وعرض الكود ورمز الـ QR الخاص بالطالب الجديد (المرحلة الثالثة والثامنة) -->
+                <!-- نجاح التسجيل وعرض الكود ورمز الـ QR الخاص بالطالب الجديد -->
                 <template x-if="!isEditing && $store.apex.students.length > 0">
                     <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3 text-center font-mono text-xs animate-slide-up">
                         <p class="font-bold text-emerald-900">✅ تم تسجيل الطالب بنجاح وتوليد كارت الهوية!</p>
@@ -765,7 +743,6 @@
                             <p class="text-sm text-slate-700 font-bold" x-text="'اسم الطالب: ' + $store.apex.students[0].name"></p>
                             <p class="text-sm text-indigo-700 font-bold" x-text="'كود الحضور المخصص: ' + $store.apex.students[0].code"></p>
                             
-                            <!-- توليد الـ QR التلقائي للطالب المسجل حديثاً (تم الإصلاح) -->
                             <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mt-2"
                                  x-init="
                                      $nextTick(() => {
@@ -786,7 +763,7 @@
             </div>
         </div>
 
-        <!-- 4. الحضور والكاميرا (مع المسح من ملف صورة - المرحلة الثامنة) -->
+        <!-- 4. الحضور والكاميرا -->
         <div x-show="$store.apex.currentTab === 'attendance'"
              x-data="{
                  codeInput: '', scanResult: null, scanner: null, isScanning: false,
@@ -835,7 +812,7 @@
 
                 <div id="reader" class="w-full overflow-hidden rounded-xl border-0"></div>
 
-                <!-- مسح كود QR من صورة مرفوعة (المرحلة الثامنة) -->
+                <!-- مسح كود QR من صورة مرفوعة -->
                 <div class="space-y-2 pt-2 border-t text-right text-xs">
                     <label class="block font-bold text-slate-600 mb-1">
                         <i class="fa-solid fa-image text-indigo-500"></i> قراءة رمز QR ملقوط من صورة أو لقطة شاشة:
@@ -850,7 +827,7 @@
                                     $store.apex.showToast('تمت معالجة وفك تشفير الكود من الصورة بنجاح', 'success');
                                 })
                                 .catch(err => {
-                                    $store.apex.showToast('تعذر العثور على رمز QR واضح في هذه الصورة، يرجى المحاولة بصورة أوضح', 'error');
+                                    $store.apex.showToast('تعذر العثور على رمز QR واضح في هذه الصورة', 'error');
                                 });
                         }
                     " accept="image/*"
@@ -903,7 +880,7 @@
                     <h4 class="text-xs font-bold text-slate-700">
                         <i class="fa-solid fa-calendar-check text-emerald-500"></i> حضور اليوم الفعلي
                     </h4>
-                    <!-- البحث الذكي للحضور (المرحلة الرابعة) -->
+                    <!-- البحث الذكي للحضور -->
                     <input type="text" x-model="$store.apex.searchTerms.attendance" placeholder="تصفية الحضور سريعاً..."
                            class="px-3 py-1 border rounded-lg text-[10px] focus:outline-none focus:border-indigo-600">
                 </div>
@@ -942,7 +919,7 @@
                     <input type="text" x-model="name" placeholder="اسم المجموعة..." required
                            class="w-full px-4 py-2 border rounded-xl">
                     <div class="grid grid-cols-2 gap-4">
-                        <select x-model="year" required class="w-full px-4 py-2 border rounded-xl">
+                        <select x-model="year" required class="w-full px-4 py-2 border rounded-xl bg-white text-right">
                             <option value="">السنة الدراسية...</option>
                             <template x-for="y in $store.apex.years" :key="y.id">
                                 <option :value="y.name" x-text="y.name"></option>
@@ -952,13 +929,13 @@
                                class="w-full px-4 py-2 border rounded-xl">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <select x-model="hallId" class="w-full px-4 py-2 border rounded-xl">
+                        <select x-model="hallId" class="w-full px-4 py-2 border rounded-xl bg-white text-right">
                             <option value="">القاعة الدراسية...</option>
                             <template x-for="h in $store.apex.halls" :key="h.id">
                                 <option :value="h.id" x-text="h.name"></option>
                             </template>
                         </select>
-                        <select x-model="teacherId" class="w-full px-4 py-2 border rounded-xl">
+                        <select x-model="teacherId" class="w-full px-4 py-2 border rounded-xl bg-white text-right">
                             <option value="">المعلم المسؤول...</option>
                             <template x-for="t in $store.apex.teachers" :key="t.id">
                                 <option :value="t.id" x-text="t.name"></option>
@@ -979,7 +956,7 @@
             <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs space-y-2 p-4">
                 <div class="flex justify-between items-center border-b pb-2">
                     <h4 class="font-bold text-slate-700">قائمة المجموعات النشطة</h4>
-                    <!-- البحث الذكي للمجموعات (المرحلة الرابعة) -->
+                    <!-- البحث الذكي للمجموعات -->
                     <input type="text" x-model="$store.apex.searchTerms.groups" placeholder="بحث ذكي بالمجموعات..."
                            class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
                 </div>
@@ -1020,7 +997,7 @@
             </div>
         </div>
 
-        <!-- 6. التحصيل والرسوم والمالية المطور (المرحلة السادسة) -->
+        <!-- 6. التحصيل والرسوم والمالية المطور -->
         <div x-show="$store.apex.currentTab === 'accounts'"
              x-data="{ studentId:'', amount:'', month:'', statementStudentId: '' }"
              class="space-y-6" x-cloak>
@@ -1069,7 +1046,7 @@
                     " class="space-y-3">
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">اختر الطالب:</label>
-                            <select x-model="studentId" required class="w-full px-4 py-2 border rounded-xl bg-white">
+                            <select x-model="studentId" required class="w-full px-4 py-2 border rounded-xl bg-white text-right">
                                 <option value="">اختر الطالب لملء مديونيته...</option>
                                 <template x-for="st in $store.apex.students" :key="st.id">
                                     <option :value="st.id"
@@ -1080,11 +1057,11 @@
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">المبلغ المحصل (ج.م):</label>
                             <input type="number" x-model="amount" placeholder="المبلغ المسدد..." required
-                                   class="w-full px-4 py-2 border rounded-xl">
+                                   class="w-full px-4 py-2 border rounded-xl text-right">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">الشهر المستحق:</label>
-                            <select x-model="month" required class="w-full px-4 py-2 border rounded-xl bg-white">
+                            <select x-model="month" required class="w-full px-4 py-2 border rounded-xl bg-white text-right">
                                 <option value="">اختر الشهر...</option>
                                 <option>سبتمبر</option><option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
                                 <option>يناير</option><option>فبراير</option><option>مارس</option><option>أبريل</option>
@@ -1108,7 +1085,6 @@
                             <button @click="
                                 if (!statementStudentId) { $store.apex.showToast('يرجى تحديد طالب أولاً', 'warning'); return; }
                                 const s = $store.apex.students.find(st => st.id === Number(statementStudentId));
-                                const stats = $store.apex.getStudentStats(s.id);
                                 const pays = $store.apex.payments.filter(p => p.studentId === s.id);
                                 const rows = pays.map(p => [p.date, p.month, p.amount + ' ج.م']);
                                 $store.apex.printTable(`كشف حساب الطالب: ${s.name}`, ['التاريخ','الفترة/الشهر','المبلغ المدفوع'], rows, `${s.name}_Statement.pdf`);
@@ -1128,7 +1104,7 @@
                     </div>
 
                     <div class="space-y-3">
-                        <select x-model="statementStudentId" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
+                        <select x-model="statementStudentId" class="w-full p-2.5 border rounded-xl bg-white font-semibold text-right">
                             <option value="">اختر الطالب لاستخراج كشف حسابه...</option>
                             <template x-for="st in $store.apex.students" :key="st.id">
                                 <option :value="st.id" x-text="st.name + ' - ' + st.code"></option>
@@ -1180,7 +1156,7 @@
                         return !q || f.title.toLowerCase().includes(q) || f.category.toLowerCase().includes(q);
                     })" :key="p.id">
                         <div class="p-2 bg-slate-50 border rounded-xl flex justify-between items-center">
-                            <span :class="p.type === 'income' ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'" class="px-2 py-0.5 rounded font-bold" x-text="p.type === 'income' ? 'إيراد' : 'مصروف'"></span>
+                            <span :class="p.type === 'income' ? 'text-emerald-600 bg-emerald-50 text-emerald-800' : 'text-rose-600 bg-rose-50 text-rose-800'" class="px-2 py-0.5 rounded font-bold" x-text="p.type === 'income' ? 'إيراد' : 'مصروف'"></span>
                             <span class="font-bold text-slate-700 text-right" x-text="p.title"></span>
                             <span class="text-slate-400" x-text="p.date"></span>
                             <span class="font-bold" :class="p.type === 'income' ? 'text-emerald-700' : 'text-rose-700'" x-text="p.amount + ' ج.م'"></span>
@@ -1190,7 +1166,7 @@
             </div>
         </div>
 
-        <!-- 7. قسم التقارير المتقدمة الجديد كلياً (المرحلة السابعة) -->
+        <!-- 7. قسم التقارير المتقدمة الجديد كلياً -->
         <div x-show="$store.apex.currentTab === 'reports'" class="space-y-6" x-cloak>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <!-- قائمة التقارير الجانبية المتاحة -->
@@ -1302,7 +1278,7 @@
                         <div class="p-8 text-center text-slate-400 border border-dashed rounded-2xl">
                             <i class="fa-solid fa-folder-open text-3xl mb-2 text-indigo-500"></i>
                             <p class="font-bold">يرجى فحص التقارير المخصصة والرسوم التفاعلية</p>
-                            <span class="text-[10px] text-slate-400">كافة إحصائيات الطلاب والعمليات وحركات الصندوق متزامنة لحظياً وتدعم الطباعة الكاملة [15, 16].</span>
+                            <span class="text-[10px] text-slate-400">كافة إحصائيات الطلاب والعمليات وحركات الصندوق متزامنة لحظياً وتدعم الطباعة الكاملة.</span>
                         </div>
                     </div>
                 </div>
@@ -1337,7 +1313,6 @@
             <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs space-y-2 p-4">
                 <div class="flex justify-between items-center border-b pb-2">
                     <h4 class="font-bold text-slate-700">قائمة المعلمين المعتمدين</h4>
-                    <!-- البحث الذكي للمعلمين (المرحلة الرابعة) -->
                     <input type="text" x-model="$store.apex.searchTerms.teachers" placeholder="تصفية المعلمين..."
                            class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
                 </div>
@@ -1416,8 +1391,8 @@
                                 <td class="p-3 font-mono font-bold text-indigo-600" x-text="$store.apex.getHallStats(h).groupCount"></td>
                                 <td class="p-3">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-24 bg-slate-100 h-2 rounded-full overflow-hidden">
-                                            <div class="bg-indigo-600 h-full rounded-full"
+                                        <div class="w-24 bg-slate-100 h-2 rounded-full overflow-hidden flex">
+                                            <div class="bg-indigo-600 h-full rounded-full transition-all"
                                                  :style="'width: ' + $store.apex.getHallStats(h).occupancy + '%'"></div>
                                         </div>
                                         <span class="font-mono text-[9px]" x-text="$store.apex.getHallStats(h).occupancy + '%'"></span>
@@ -1469,7 +1444,6 @@
             <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs p-4 space-y-2">
                 <div class="flex justify-between items-center border-b pb-2">
                     <h4 class="font-bold text-slate-700">قائمة السنوات والصفوف الدراسية المقيدة</h4>
-                    <!-- البحث الذكي المخصص للمراحل الدراسية (المرحلة الرابعة) -->
                     <input type="text" x-model="$store.apex.searchTerms.years" placeholder="بحث في المراحل الدراسية..."
                            class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
                 </div>
@@ -1499,7 +1473,7 @@
                 </table>
             </div>
 
-            <!-- أرشيف الدفعات والسنوات السابقة المطور (المرحلة الحادية عشرة) -->
+            <!-- أرشيف الدفعات والسنوات السابقة المطور -->
             <template x-if="$store.apex.archivedYears.length > 0">
                 <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
                     <h3 class="font-bold text-xs text-slate-800 border-b pb-3">
@@ -1530,7 +1504,7 @@
             </template>
         </div>
 
-        <!-- 11. الكارنيهات (المرحلة الخامسة المحدثة - عرض شبكة الكروت التفاعلية) -->
+        <!-- 11. الكارنيهات -->
         <div x-show="$store.apex.currentTab === 'cards'"
              x-data="{
                  studentId: '',
@@ -1553,7 +1527,7 @@
                     </button>
                 </div>
 
-                <!-- عدادات الكارنيهات وحالات الطباعة (المرحلة الخامسة) -->
+                <!-- عدادات الكارنيهات وحالات الطباعة -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                     <div class="bg-indigo-50/50 p-3 rounded-xl border text-center">
                         <p class="text-[9px] text-indigo-700 font-bold">مجموع الطلاب</p>
@@ -1569,7 +1543,7 @@
                     </div>
                 </div>
 
-                <!-- أزرار وفلاتر التحكم بحالة الطباعة (المرحلة الخامسة) -->
+                <!-- أزرار وفلاتر التحكم بحالة الطباعة -->
                 <div class="flex flex-col md:flex-row justify-between items-center gap-3 pt-2">
                     <div class="flex gap-2 text-xs">
                         <button @click="$store.apex.cardPrintFilter = 'all'"
@@ -1608,12 +1582,12 @@
 
                 <!-- البحث والتصفية الذكية -->
                 <div class="relative text-xs">
-                    <label class="block font-bold text-slate-600 mb-1.5">بحث وتصفية الطلاب في الكارنيهات (المرحلة الرابعة):</label>
+                    <label class="block font-bold text-slate-600 mb-1.5">بحث وتصفية الطلاب في الكارنيهات:</label>
                     <input type="text" x-model="$store.apex.searchTerms.cards" placeholder="ابحث باسم الطالب لتصفية الكروت المعروضة..."
                            class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
                 </div>
 
-                <!-- شبكة كروت الطلاب المستهدفة التفاعلية (تم إعادة بنائها بالكامل) -->
+                <!-- شبكة كروت الطلاب المستهدفة التفاعلية -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 animate-fade-in">
                     <template x-for="st in $store.apex.getFilteredCards()" :key="st.id">
                         <div class="relative rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col justify-between p-4 bg-white bg-cover bg-center h-[210px] w-full max-w-[340px] mx-auto animate-fade-in"
@@ -1628,13 +1602,11 @@
                                     <p class="text-[9px] font-bold" :class="$store.apex.cardTemplate ? 'text-slate-700':'text-white/95'" x-text="st.group"></p>
                                     <p class="text-[8px]" :class="$store.apex.cardTemplate ? 'text-slate-500':'text-white/80'" x-text="'هاتف: ' + (st.phone || '-')"></p>
                                     
-                                    <!-- شارة حالة الطباعة الملوّنة المحدثة (تم إضافة كلاس المراقبة) -->
                                     <span class="inline-block mt-2 px-2 py-0.5 rounded text-[8px] font-bold print-status-badge"
                                           :class="st.printedState === 'printed' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
                                           x-text="st.printedState === 'printed' ? 'تمت الطباعة ✅' : 'لم تتم الطباعة ❌'"></span>
                                 </div>
                                 <div class="text-center flex flex-col items-center gap-1.5 z-10 font-bold">
-                                    <!-- صورة الطالب الشخصية أو عنصر الأيقونة التفاعلية الأنيق بدلاً من الأيقونة المكسورة (تم التعديل) -->
                                     <template x-if="st.image">
                                         <img :src="st.image" class="w-12 h-12 rounded-lg object-cover border-2 border-white shadow-sm">
                                     </template>
@@ -1643,7 +1615,7 @@
                                             <i class="fa-solid fa-user text-lg"></i>
                                         </div>
                                     </template>
-                                    <!-- توليد رمز الـ QR التلقائي لكل طالب بالشبكة التفاعلية -->
+                                    <!-- رمز الـ QR التلقائي لكل طالب بالشبكة التفاعلية -->
                                     <div class="bg-white p-1 rounded shadow-sm flex items-center justify-center animate-fade-in"
                                          x-init="
                                              $nextTick(() => {
@@ -1661,13 +1633,11 @@
                                 </div>
                             </div>
                             
-                            <!-- تم رفع نصوص الكود السفلي بمقدار mb-3 وإبعادها عن حافة الكارت لتفادي القص والتشوه تماماً (تم التعديل الفني والضبط للمقاسات) -->
                             <div class="relative z-10 flex justify-between items-end text-[9px] font-mono font-bold mb-3 px-1" :class="$store.apex.cardTemplate ? 'text-slate-700':'text-white/90'">
                                 <span x-text="st.code"></span>
                                 <span class="font-semibold">أكاديمية أبيكس التعليمية</span>
                             </div>
                             
-                            <!-- أدوات تصدير سريعة مدمجة على الكارت الفردي (تمت ترقية خيارات التحميل مع حظر شارة حالة الطباعة - المرحلة 13) -->
                             <div class="absolute bottom-2 left-2 flex gap-1 z-20 no-print action-buttons-wrap">
                                 <button @click="$store.apex.activeStudentDetails = st;" title="تفاصيل الطالب"
                                         class="bg-slate-900/80 hover:bg-slate-900 text-white p-1 rounded text-[8px] font-bold transition-all">
@@ -1718,14 +1688,13 @@
                         <i class="fa-solid fa-cloud-arrow-down text-sm"></i> تصدير نسخة احتياطية (JSON)
                     </button>
 
-                    <!-- خيار استيراد النسخة الاحتياطية وزر تشغيل الاسترداد التفاعلي الجديد (تم التعديل) -->
+                    <!-- خيار استيراد النسخة الاحتياطية -->
                     <div class="space-y-2 text-right text-xs border-t pt-4" x-data="{ selectedFile: null }">
                         <label class="block font-bold text-slate-600 mb-1">استيراد واسترجاع نسخة احتياطية من ملف خارجي:</label>
                         <div class="flex flex-col md:flex-row gap-2">
                             <input type="file" @change="selectedFile = $event.target.files[0]" accept=".json"
                                    class="flex-1 text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 border rounded-xl p-2 cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
                             
-                            <!-- الزر التفاعلي المطلب الذي يظهر فور اختيار الملف لبدء الاستيراد -->
                             <button type="button" x-show="selectedFile" @click="$store.apex.importDataDirect(selectedFile); selectedFile = null"
                                     class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 animate-slide-up">
                                 <i class="fa-solid fa-file-import"></i> ابدأ استيراد الملف المختار الآن
@@ -1733,14 +1702,13 @@
                         </div>
                     </div>
 
-                    <!-- زر مسح كل شيء وإعادة ضبط المصنع (المرحلة الحادية عشرة المحدثة) -->
+                    <!-- زر مسح كل شيء وإعادة ضبط المصنع الآمنة -->
                     <div class="space-y-2 text-right text-xs border-t pt-4">
-                        <label class="block font-bold text-rose-600 mb-1">إجراء إداري حساس - إعادة ضبط المصنع:</label>
+                        <label class="block font-bold text-rose-600 mb-1">إجراء ضبط مصنع وإعادة تهيئة النظام:</label>
                         <button @click="$store.apex.clearAllData()"
                                 class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2">
                             <i class="fa-solid fa-trash-can"></i> مسح كل شيء وإعادة تهيئة البرنامج من جديد
                         </button>
-                        <p class="text-[10px] text-slate-400 mt-1">يقوم هذا الإجراء بحذف جميع سجلات الطلاب، الحضور، الإيرادات، والمجموعات ليعود النظام فارغاً تماماً كأول تشغيل.</p>
                     </div>
                 </div>
             </div>
@@ -1773,7 +1741,6 @@
                         <label class="block font-bold text-slate-700 mb-1.5">تعديل كلمة مرور النظام الحالية:</label>
                         <input type="text" x-model="$store.apex.settings.password" required
                                class="w-full px-4 py-2.5 rounded-xl border text-sm font-mono focus:outline-none focus:border-indigo-600">
-                        <p class="text-[10px] text-slate-400 mt-1">تستخدم لحماية النظام عند فتح البرنامج.</p>
                     </div>
                     <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-md">
                         حفظ التغييرات في الإعدادات
@@ -1785,7 +1752,7 @@
     </main>
 </div>
 
-<!-- تفاصيل الطالب المنبثقة التفاعلية (تم ترقيتها بربط ذكي محصن بالكامل - تم الإصلاح والتحقيق) -->
+<!-- تفاصيل الطالب المنبثقة التفاعلية -->
 <div x-show="$store.apex.activeStudentDetails"
      class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
      x-cloak>
@@ -1797,7 +1764,6 @@
         </button>
 
         <div class="flex gap-4 items-center border-b pb-4">
-            <!-- الصورة الشخصية أو عنصر الأيقونة التفاعلية الأنيق بدلاً من الأيقونة المكسورة (تم التعديل) -->
             <template x-if="$store.apex.activeStudentDetails?.image">
                 <img :src="$store.apex.activeStudentDetails.image" class="w-16 h-16 rounded-2xl object-cover border shadow-sm">
             </template>
@@ -1836,7 +1802,6 @@
                 <h4 class="font-bold text-indigo-600 border-b pb-1 w-full">
                     <i class="fa-solid fa-qrcode"></i> كود QR مخصص
                 </h4>
-                <!-- مراقب ذكي مدمج يولد كود الـ QR لحظياً عند رصد تغيير اسم الطالب لمنع التجمد (تم الإصلاح) -->
                 <div id="details-qrcode-box" class="bg-white p-2 rounded-xl shadow-sm flex items-center justify-center"
                      x-init="
                          $watch('$store.apex.activeStudentDetails', (st) => {
