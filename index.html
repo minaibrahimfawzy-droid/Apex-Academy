@@ -3,50 +3,1877 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تنبيه الأمان - أكاديمية أبيكس</title>
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="أكاديمية أبيكس - النظام المتكامل لإدارة السنتر التعليمي v121">
+    <title>أكاديمية أبيكس - v121</title>
+    <link rel="manifest" href="manifest.json">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- html2pdf.js الموحدة لحفظ وطباعة التقارير والكارنيهات بدقة متناهية ودعم العربية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Html5QrcodeScanner -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+    <!-- استدعاء ملفات التنسيق -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/forms.css">
+    <link rel="stylesheet" href="css/cards.css">
+    <link rel="stylesheet" href="css/tables.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/print.css">
+
+    <!-- ملفات التحديث والتحكم للنظام -->
+    <script src="app.js" defer></script>
+    <script src="js/config.js" defer></script>
+    <script src="js/core/update.js" defer></script>
+    
+    <!-- مكتبة Alpine.js لبناء التفاعل والواجهة -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; }
+        [x-cloak] { display: none !important; }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50%       { transform: scale(1.3); opacity: 0.7; }
+        }
+        .animate-pulse-dot { animation: pulse-dot 1.5s infinite; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 text-slate-800 antialiased font-semibold"
+      x-data x-init="$store.apex.initApp()">
 
-    <!-- شاشة الحظر الكاملة والمنسقة للسنتر -->
-    <div class="max-w-md w-full bg-slate-900 border border-rose-500/30 rounded-3xl p-8 shadow-2xl text-center space-y-6">
+<!-- شاشة قفل انتهاء الفترة التجريبية والمطالبة بكود التفعيل الرياضي (المطلب الجديد والمطور - المرحلة 14) -->
+<div x-show="$store.apex.isTrialExpired && !$store.apex.isActivated"
+     class="fixed inset-0 bg-slate-950/95 z-[99999999] flex items-center justify-center p-6 backdrop-blur-lg"
+     x-cloak>
+    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl text-center space-y-6 border border-rose-100 animate-slide-up">
+        <div class="w-16 h-16 bg-rose-50 text-rose-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-md border border-rose-100">
+            <i class="fa-solid fa-hourglass-end animate-pulse"></i>
+        </div>
         
-        <!-- أيقونة القفل التفاعلية -->
-        <div class="w-20 h-20 bg-rose-500/10 text-rose-500 rounded-full mx-auto flex items-center justify-center text-4xl border border-rose-500/20">
-            <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+        <div class="space-y-2">
+            <h3 class="font-extrabold text-rose-600 text-lg">انتهت الفترة التجريبية المجانية للبرنامج</h3>
+            <p class="text-slate-500 text-xs leading-relaxed" x-text="$store.apex.trialRemainingText"></p>
         </div>
 
-        <div class="space-y-3">
-            <h2 class="text-rose-500 font-extrabold text-xl">تم تعليق ترخيص النظام مؤقتاً</h2>
-            <p class="text-slate-400 text-xs leading-relaxed">
-                عذراً، لقد تم تعليق صلاحية الوصول إلى قاعدة بيانات هذا السنتر مؤقتاً لمراجعة الحسابات الإدارية السنوية مع المطور.
-            </p>
-            <p class="text-slate-400 text-xs font-bold leading-relaxed pt-2">
-                الرجاء التواصل مع الدعم الفني الخاص بمطور النظام لإعادة التفعيل الفوري وسداد المستحقات المتأخرة.
-            </p>
+        <!-- كود الجهاز والنموذج الرياضي التفاعلي -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1 font-mono text-xs">
+            <p class="text-slate-400 text-[10px]">الرجاء تزويد المطور بكود جهازك التالي لتلقي مفتاح التفعيل:</p>
+            <p class="text-lg font-extrabold text-slate-800" x-text="'Device ID: ' + $store.apex.deviceCode"></p>
         </div>
 
-        <!-- زر اتصال مباشر بالواتساب الخاص بالمطور -->
-        <div class="pt-2">
-            <a href="https://wa.me/201033773242" target="_blank" 
-               class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition-all shadow-lg shadow-rose-600/20 flex items-center justify-center gap-2">
-                <i class="fa-brands fa-whatsapp text-sm"></i> مراسلة المطور عبر واتساب (01033773242)
-            </a>
-        </div>
+        <form @submit.prevent="$store.apex.activateApp()" class="space-y-4 text-right text-xs">
+            <div>
+                <label class="block font-bold text-slate-600 mb-1">أدخل كود تفعيل الترخيص السري:</label>
+                <input type="text" x-model="$store.apex.activationInput" required placeholder="أدخل مفتاح التفعيل السداسي..."
+                       class="w-full px-4 py-3 text-center tracking-widest font-mono font-bold rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 transition-all">
+            </div>
+            <button type="submit"
+                    class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/30">
+                تفعيل وترخيص النسخة مدى الحياة
+            </button>
+        </form>
 
-        <div class="border-t border-slate-800 pt-4 flex justify-between items-center text-[9px] text-slate-500 font-mono">
+        <div class="border-t pt-4 flex justify-between items-center text-[9px] text-slate-400 font-mono">
             <span>Apex Academy v121</span>
-            <span>ID: Suspended_License</span>
+            <span>ID: Trial_Lock</span>
         </div>
     </div>
+</div>
+
+<!-- شاشة الحظر والقفل عن بعد التامة (تظهر في حال تفعيل وضع الـ Kill-Switch السحابي - التعديل الثاني عشر) -->
+<div x-show="$store.apex.isRemoteLocked"
+     class="fixed inset-0 bg-slate-950/95 z-[9999999] flex items-center justify-center p-6 backdrop-blur-lg"
+     x-cloak>
+    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl space-y-6 text-center border border-rose-100 animate-pulse-dot">
+        <div class="w-20 h-20 bg-rose-50 text-rose-600 rounded-full mx-auto flex items-center justify-center text-4xl shadow-lg">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <div class="space-y-3">
+            <h3 class="font-bold text-rose-600 text-xl">تنبيه الترخيص والحماية</h3>
+            <p class="text-slate-600 text-xs leading-relaxed" x-text="$store.apex.remoteLockMessage"></p>
+        </div>
+        <div class="border-t pt-4 text-[10px] text-slate-400 font-mono">
+            ID: <span x-text="window.location.hostname || 'Localhost'"></span>
+        </div>
+    </div>
+</div>
+
+<!-- شريط تنبيه الفترة التجريبية النشط في أعلى المتصفح (المرحلة الرابعة عشر) -->
+<template x-if="!$store.apex.isActivated && !$store.apex.isTrialExpired">
+    <div class="bg-amber-600 text-white px-4 py-2.5 text-xs font-bold text-center flex justify-center items-center gap-2 shadow-md no-print">
+        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        <span x-text="$store.apex.trialRemainingText"></span>
+    </div>
+</template>
+
+<!-- 1. شاشة تسجيل الدخول المعتادة -->
+<div x-show="!$store.apex.isUnlocked"
+     class="fixed inset-0 bg-slate-950/90 z-[999999] flex items-center justify-center p-4 backdrop-blur-md"
+     x-cloak>
+    <div class="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl space-y-6 text-center border border-slate-100">
+        <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-3xl font-bold">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="space-y-2">
+            <h3 class="font-bold text-slate-900 text-2xl">تسجيل الدخول لأكاديمية أبيكس</h3>
+            <p class="text-slate-500 text-xs leading-relaxed">الرجاء كتابة رمز التحقق للمرور الآمن.</p>
+        </div>
+        <form @submit.prevent="$store.apex.checkPassword()" class="space-y-4">
+            <input type="password"
+                   x-model="$store.apex.passwordInput"
+                   placeholder="أدخل كلمة المرور..."
+                   required
+                   class="w-full px-4 py-3 text-center tracking-widest font-mono rounded-xl border border-slate-200 text-lg focus:outline-none focus:border-indigo-600 transition-all">
+            <template x-if="$store.apex.passwordError">
+                <p class="text-xs font-bold text-rose-600 flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i> الرمز غير مطابق.
+                </p>
+            </template>
+            <button type="submit"
+                    class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/30">
+                تحقق ومرور
+            </button>
+        </form>
+        <p class="text-[9px] text-slate-400">الإصدار v121</p>
+    </div>
+</div>
+
+<!-- 2. نافذة ترحيل الأرشيف السنوي -->
+<div x-show="$store.apex.showArchiveModal"
+     class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
+     x-cloak>
+    <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4 text-center border">
+        <div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl mx-auto flex items-center justify-center text-xl">
+            <i class="fa-solid fa-box-archive"></i>
+        </div>
+        <h3 class="font-bold text-lg text-slate-800">ترحيل السنة الحالية</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">اكتب اسماً للأرشيف (مثل: العام 2026-2027) لحفظ البيانات وبدء سنة نظيفة.</p>
+        <input type="text"
+               x-model="$store.apex.archiveYearName"
+               placeholder="العام الدراسي..."
+               class="w-full px-4 py-2.5 border rounded-xl text-xs text-center focus:outline-none focus:border-indigo-600">
+        <div class="flex gap-2 pt-2">
+            <button @click="$store.apex.confirmArchiveYear()"
+                    class="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-all shadow-md">
+                ترحيل الآن
+            </button>
+            <button @click="$store.apex.showArchiveModal = false"
+                    class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. نافذة سجل التحديثات v121 (المرحلة الثانية عشرة) -->
+<div x-show="$store.apex.showChangelogModal"
+     class="fixed inset-0 bg-slate-950/85 z-[999999] flex items-center justify-center p-4 backdrop-blur-md"
+     x-cloak>
+    <div class="bg-white max-w-lg w-full rounded-3xl p-6 shadow-2xl space-y-5 text-right border border-indigo-50">
+        <div class="flex items-center gap-3 border-b pb-3 border-slate-100">
+            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-gift"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg text-slate-900">أكاديمية أبيكس v121</h3>
+                <p class="text-[10px] text-slate-400">تحديث الاستقرار والأداء والترقية الكاملة للميزات</p>
+            </div>
+        </div>
+        
+        <div class="space-y-3 max-h-96 overflow-y-auto text-xs text-slate-600 leading-relaxed pl-1">
+            <h4 class="font-bold text-slate-800 text-sm">الجديد والمطور في هذا الإصدار:</h4>
+            <ul class="space-y-2 list-disc list-inside">
+                <li><span class="font-bold text-indigo-600">إصلاح كامل لنظام الـ PDF</span>: حل شامل لمشاكل طباعة الكارنيهات (فردية وجماعية) وحفظ تقارير الطلاب بدقة عالية وألوان متناسقة RTL.</li>
+                <li><span class="font-bold text-indigo-600">البحث الذكي الفوري</span>: تم تزويد جميع جداول الأقسام بمربعات بحث حية ذكية للوصول الفوري للمعلومة أثناء الكتابة.</li>
+                <li><span class="font-bold text-indigo-600">تطوير قسم الكارنيهات</span>: إضافة تصفية مخصصة للكارنيهات (المطبوعة / غير المطبوعة) مع عدادات إحصائية دقيقة وزر لإعادة التعيين.</li>
+                <li><span class="font-bold text-indigo-600">لوحة تحكم التحصيل المتطورة</span>: توفير كشف حساب تفصيلي مالي كامل لكل طالب وتصديره لملفات PDF أو Excel منفصلة.</li>
+                <li><span class="font-bold text-indigo-600">قسم التقارير المتقدمة الجديد كلياً</span>: مساحة موحدة لاستعراض تقارير تفصيلية عن الطلاب، الحضور والغياب، المجموعات، والمالية مع رسوم بيانية توضيحية.</li>
+                <li><span class="font-bold text-indigo-600">تحسينات في قارئ الـ QR</span>: توفير حماية كاملة ضد الحضور المكرر وقراءة الكود من الصور المرفوعة والملقوطة مباشرة.</li>
+            </ul>
+        </div>
+
+        <button @click="localStorage.setItem('apex_version_changelog_viewed', '121'); $store.apex.showChangelogModal = false;"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs transition-all shadow-lg shadow-indigo-600/20">
+            رائع، دعنا نبدأ العمل!
+        </button>
+    </div>
+</div>
+
+<!-- 4. شريط Toast الإشعاري -->
+<div x-show="$store.apex.toast.show"
+     class="fixed bottom-6 right-6 z-[99999] p-4 rounded-2xl shadow-xl flex items-center gap-3 border text-xs max-w-sm animate-slide-up"
+     :class="{
+         'bg-emerald-50 border-emerald-200 text-emerald-800': $store.apex.toast.type === 'success',
+         'bg-amber-50  border-amber-200  text-amber-800' :  $store.apex.toast.type === 'warning',
+         'bg-rose-50   border-rose-200   text-rose-800'  :  $store.apex.toast.type === 'error',
+         'bg-sky-50    border-sky-200    text-sky-800'   :  $store.apex.toast.type === 'info'
+     }"
+     x-cloak>
+    <i class="fa-solid fa-lg"
+       :class="{
+           'fa-circle-check    text-emerald-500': $store.apex.toast.type === 'success',
+           'fa-triangle-exclamation text-amber-500': $store.apex.toast.type === 'warning',
+           'fa-circle-xmark    text-rose-500'  : $store.apex.toast.type === 'error',
+           'fa-circle-info     text-sky-500'   : $store.apex.toast.type === 'info'
+       }"></i>
+    <span x-text="$store.apex.toast.message"></span>
+</div>
+
+<!-- 5. شريط التحديثات -->
+<template x-if="$store.apex.hasUpdate">
+    <div class="bg-rose-600 text-white px-4 py-3 text-xs font-bold text-center flex justify-center items-center gap-3 shadow-md z-50">
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse-dot"></span>
+        <span>يتوفر تحديث جديد (الإصدار <span x-text="$store.apex.remoteVersion"></span>)!</span>
+        <button @click="$store.apex.triggerUpdate()"
+                class="bg-white text-rose-600 px-3 py-1 rounded text-[11px] font-extrabold hover:bg-rose-50 transition-all shadow-sm">
+            تحديث الآن
+        </button>
+    </div>
+</template>
+
+<div class="min-h-screen flex flex-col">
+
+    <!-- الهيدر الرئيسي -->
+    <header class="bg-slate-900 text-white shadow-md px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 no-print">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-xl shadow-lg">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-md">أكاديمية أبيكس التعليمية</h1>
+                <p class="text-[9px] text-indigo-300">النظام المتكامل لإدارة السنتر والطلاب</p>
+            </div>
+        </div>
+
+        <!-- البحث العام المطور -->
+        <div class="relative w-full md:w-80" @click.away="$store.apex.showGlobalSearchResults = false">
+            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </div>
+            <input type="text"
+                   x-model="$store.apex.globalQuery"
+                   @focus="$store.apex.showGlobalSearchResults = true"
+                   @input="$store.apex.showGlobalSearchResults = true"
+                   placeholder="البحث الموحد السريع..."
+                   class="w-full pl-4 pr-9 py-2 bg-slate-800 text-white text-xs rounded-xl border border-slate-700 focus:outline-none transition-all">
+
+            <!-- نتائج البحث الجانبي المطور -->
+            <div x-show="$store.apex.showGlobalSearchResults && $store.apex.globalQuery"
+                 class="absolute left-0 right-0 top-11 bg-white text-slate-800 rounded-2xl shadow-2xl p-4 border max-h-80 overflow-y-auto z-[9999] space-y-3 text-right"
+                 x-cloak>
+                <template x-if="$store.apex.globalSearchResults.students.length > 0">
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-indigo-600 border-b pb-1">
+                            <i class="fa-solid fa-user-graduate"></i> الطلاب:
+                        </p>
+                        <template x-for="st in $store.apex.globalSearchResults.students" :key="st.id">
+                            <div @click="$store.apex.activeStudentDetails = st; $store.apex.generateDetailsQR(st.code); $store.apex.showGlobalSearchResults = false;"
+                                 class="flex justify-between items-center p-1.5 hover:bg-slate-50 rounded cursor-pointer text-[11px]">
+                                <span class="font-bold" x-text="st.name"></span>
+                                <span class="text-slate-400 font-mono" x-text="st.code"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template x-if="$store.apex.globalSearchResults.teachers.length > 0">
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-amber-600 border-b pb-1">
+                            <i class="fa-solid fa-chalkboard-user"></i> المعلمون:
+                        </p>
+                        <template x-for="t in $store.apex.globalSearchResults.teachers" :key="t.id">
+                            <div class="p-1.5 hover:bg-slate-50 rounded text-[11px]">
+                                <span class="font-bold" x-text="t.name"></span>
+                                <span class="text-slate-400 mr-2" x-text="t.subject"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template x-if="$store.apex.globalSearchResults.groups.length > 0">
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-emerald-600 border-b pb-1">
+                            <i class="fa-solid fa-layer-group"></i> المجموعات:
+                        </p>
+                        <template x-for="g in $store.apex.globalSearchResults.groups" :key="g.id">
+                            <div class="p-1.5 text-[11px]" x-text="g.name + ' - ' + g.year"></div>
+                        </template>
+                    </div>
+                </template>
+                <template x-if="!$store.apex.globalSearchResults.students.length && !$store.apex.globalSearchResults.teachers.length && !$store.apex.globalSearchResults.groups.length">
+                    <p class="text-[11px] text-slate-400 text-center py-2">لا توجد نتائج</p>
+                </template>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button @click="$store.apex.lockApp()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] text-rose-400 rounded-lg border border-slate-700 transition-all font-bold">
+                <i class="fa-solid fa-power-off ml-1"></i> خروج وقفل
+            </button>
+            <div class="text-[10px] font-mono bg-indigo-950 px-3 py-1.5 rounded-lg border border-indigo-900/40 text-indigo-200">v121</div>
+        </div>
+    </header>
+
+    <!-- شريط التبويبات والملاحة الرئيسي المطور -->
+    <nav class="bg-white border-b border-slate-200 px-4 py-3 flex overflow-x-auto space-x-reverse space-x-2.5 text-xs font-bold shadow-sm no-print">
+        <button @click="$store.apex.currentTab = 'home'"
+                :class="$store.apex.currentTab === 'home' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-house ml-1"></i> الرئيسية
+        </button>
+        <button @click="$store.apex.currentTab = 'students'"
+                :class="$store.apex.currentTab === 'students' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-user-graduate ml-1"></i> الطلاب والتحكم
+        </button>
+        <button @click="$store.apex.currentTab = 'register'"
+                :class="$store.apex.currentTab === 'register' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-plus ml-1"></i> تسجيل طالب
+        </button>
+        <button @click="$store.apex.currentTab = 'attendance'"
+                :class="$store.apex.currentTab === 'attendance' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-qrcode ml-1"></i> قارئ الحضور
+        </button>
+        <button @click="$store.apex.currentTab = 'groups'"
+                :class="$store.apex.currentTab === 'groups' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-layer-group ml-1"></i> المجموعات
+        </button>
+        <button @click="$store.apex.currentTab = 'accounts'"
+                :class="$store.apex.currentTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-money-bill-wave ml-1"></i> التحصيل والمالية
+        </button>
+        <button @click="$store.apex.currentTab = 'reports'"
+                :class="$store.apex.currentTab === 'reports' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-chart-line ml-1"></i> قسم التقارير (v121)
+        </button>
+        <button @click="$store.apex.currentTab = 'teachers'"
+                :class="$store.apex.currentTab === 'teachers' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-chalkboard-user ml-1"></i> المعلمين
+        </button>
+        <button @click="$store.apex.currentTab = 'halls'"
+                :class="$store.apex.currentTab === 'halls' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-door-open ml-1"></i> القاعات
+        </button>
+        <button @click="$store.apex.currentTab = 'years'"
+                :class="$store.apex.currentTab === 'years' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-calendar-alt ml-1"></i> إدارة السنوات
+        </button>
+        <button @click="$store.apex.currentTab = 'cards'"
+                :class="$store.apex.currentTab === 'cards' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-id-card ml-1"></i> الكارنيهات
+        </button>
+        <button @click="$store.apex.currentTab = 'backup'"
+                :class="$store.apex.currentTab === 'backup' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-database ml-1"></i> النسخ الاحتياطي
+        </button>
+        <!-- إدراج زر الإعدادات المفقود برمجياً في شريط التبويبات العلوي (تم الإصلاح) -->
+        <button @click="$store.apex.currentTab = 'settings'"
+                :class="$store.apex.currentTab === 'settings' ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-100 text-slate-700'"
+                class="px-4 py-2.5 rounded-xl transition-all whitespace-nowrap">
+            <i class="fa-solid fa-cog ml-1"></i> الإعدادات
+        </button>
+    </nav>
+
+    <!-- المحتوى والتبويبات المفسرة للمستخدم -->
+    <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+
+        <!-- 1. الرئيسية / لوحة التحكم -->
+        <div x-show="$store.apex.currentTab === 'home'" class="space-y-6" x-cloak>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">الطلاب</p>
+                    <h3 class="text-lg font-extrabold text-indigo-600" x-text="$store.apex.dashboardStats.studentsCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">المجموعات</p>
+                    <h3 class="text-lg font-extrabold text-emerald-600" x-text="$store.apex.dashboardStats.groupsCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">المعلمين</p>
+                    <h3 class="text-lg font-extrabold text-amber-600" x-text="$store.apex.dashboardStats.teachersCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">القاعات</p>
+                    <h3 class="text-lg font-extrabold text-cyan-600" x-text="$store.apex.dashboardStats.hallsCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">السنوات</p>
+                    <h3 class="text-lg font-extrabold text-purple-600" x-text="$store.apex.dashboardStats.yearsCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">مرات الحضور</p>
+                    <h3 class="text-lg font-extrabold text-rose-600" x-text="$store.apex.dashboardStats.attendanceCount"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">المبالغ المحصلة</p>
+                    <h3 class="text-lg font-extrabold text-emerald-700" x-text="$store.apex.dashboardStats.revenue + ' ج.م'"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-1 stat-card">
+                    <p class="text-[10px] text-slate-400">المتأخرات</p>
+                    <h3 class="text-lg font-extrabold text-rose-700" x-text="$store.apex.dashboardStats.arrears + ' ج.م'"></h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- حضور آخر 7 أيام -->
+                <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+                    <h4 class="text-xs font-bold text-slate-700 border-b pb-2">
+                        <i class="fa-solid fa-chart-bar text-indigo-500"></i> حضور آخر 7 أيام
+                    </h4>
+                    <div class="flex items-end justify-between h-32 pt-4">
+                        <template x-for="day in $store.apex.last7DaysAttendance" :key="day.date">
+                            <div class="flex flex-col items-center gap-2 flex-1">
+                                <span class="text-[9px] text-indigo-600 font-bold" x-text="day.count"></span>
+                                <div class="w-5 bg-indigo-500 hover:bg-indigo-600 transition-all rounded-t-sm bar-chart-bar"
+                                     :style="'height: ' + (day.count > 0 ? Math.min(day.count * 12, 112) + 'px' : '4px')"></div>
+                                <span class="text-[8px] text-slate-400" x-text="day.label"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- إشغال القاعات -->
+                <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                    <h4 class="text-xs font-bold text-slate-700 border-b pb-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-500"></i> إشغال القاعات التعليمية
+                    </h4>
+                    <div class="space-y-2 max-h-36 overflow-y-auto">
+                        <template x-for="h in $store.apex.hallOccupancy" :key="h.name">
+                            <div class="space-y-1 text-xs">
+                                <div class="flex justify-between">
+                                    <span class="font-bold text-slate-700" x-text="h.name"></span>
+                                    <span class="text-slate-400 font-mono text-[10px]"
+                                          x-text="h.count + ' مجموعة / ' + h.capacity + ' سعة'"></span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="bg-emerald-500 progress-fill" :style="'width: ' + h.pct + '%'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- التنبيهات والسجل -->
+            <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3 text-xs">
+                <h4 class="text-xs font-bold text-rose-600 border-b pb-2">
+                    <i class="fa-solid fa-bell"></i> تنبيهات المتأخرات والعمليات الأخيرة
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- المتأخرات -->
+                    <div class="space-y-2">
+                        <p class="font-bold text-slate-500 text-[10px]">
+                            <i class="fa-solid fa-warning text-amber-500"></i> طلاب عليهم مستحقات مالية متأخرة:
+                        </p>
+                        <div class="space-y-1 max-h-32 overflow-y-auto">
+                            <template x-for="st in $store.apex.students" :key="st.id">
+                                <template x-if="$store.apex.getStudentStats(st.id).isLate">
+                                    <div class="flex justify-between p-2 bg-rose-50/50 rounded-lg">
+                                        <span class="font-bold text-slate-700" x-text="st.name"></span>
+                                        <span class="font-mono text-rose-600 font-bold"
+                                              x-text="'متبقي: ' + $store.apex.getStudentStats(st.id).remaining + ' ج.م'"></span>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- سجلات العمليات الأخيرة -->
+                    <div class="space-y-2">
+                        <p class="font-bold text-slate-500 text-[10px]">
+                            <i class="fa-solid fa-receipt text-indigo-500"></i> العمليات والتحركات الأخيرة:
+                        </p>
+                        <div class="space-y-1 max-h-32 overflow-y-auto font-mono text-[9px]">
+                            <template x-for="log in $store.apex.logs" :key="log.id">
+                                <div class="p-1.5 bg-slate-50 border rounded-lg flex justify-between">
+                                    <span class="font-bold text-slate-700" x-text="log.action"></span>
+                                    <span class="text-slate-500" x-text="log.detail"></span>
+                                    <span class="text-slate-400" x-text="log.time"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. الطلاب والتحكم (مع البحث الذكي المخصص - المرحلة الرابعة) -->
+        <div x-show="$store.apex.currentTab === 'students'"
+             x-data="{ filterYear: '', filterGroup: '', filterLate: 'all' }"
+             class="space-y-4" x-cloak>
+
+            <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <h3 class="font-extrabold text-slate-800 text-xs">
+                        <i class="fa-solid fa-users text-indigo-600"></i> إدارة ملفات الطلاب والتحكم
+                    </h3>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button @click="
+                            const data = $store.apex.students.map(s => {
+                                const st = $store.apex.getStudentStats(s.id);
+                                return [s.code, s.name, s.year, s.group, s.phone||'-', s.regDate, s.requiredAmount||0, st.paid, st.remaining];
+                            });
+                            $store.apex.exportToCSV(data, 'Students_Report', ['الكود','الاسم','السنة','المجموعة','الهاتف','التسجيل','المطلوب','المدفوع','المتبقي']);
+                        " class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all">
+                            <i class="fa-solid fa-file-excel"></i> تصدير إكسل
+                        </button>
+                        <button @click="
+                            const rows = $store.apex.students.map(s => [s.code, s.name, s.year, s.group, s.phone||'-', $store.apex.getStudentStats(s.id).remaining + ' ج.م']);
+                            $store.apex.printTable('كشف الطلاب والمديونيات', ['الكود','الاسم','السنة','المجموعة','الهاتف','المتبقي'], rows, 'Students_Report.pdf');
+                        " class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all">
+                            <i class="fa-solid fa-print"></i> طباعة كشف الطلاب (PDF)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- البحث الذكي المخصص للطلاب (المرحلة الرابعة) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 right-3 flex items-center text-slate-400"><i class="fa-solid fa-search"></i></span>
+                        <input type="text" x-model="$store.apex.searchTerms.students" placeholder="بحث ذكي بالاسم، الكود، الهاتف..."
+                               class="w-full pl-3 pr-9 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    </div>
+                    <select x-model="filterYear" class="px-3 py-2 border rounded-xl focus:outline-none">
+                        <option value="">كل السنوات الدراسية...</option>
+                        <template x-for="y in $store.apex.years" :key="y.id">
+                            <option :value="y.name" x-text="y.name"></option>
+                        </template>
+                    </select>
+                    <select x-model="filterGroup" class="px-3 py-2 border rounded-xl focus:outline-none">
+                        <option value="">كل المجموعات...</option>
+                        <template x-for="g in $store.apex.groups" :key="g.id">
+                            <option :value="g.name" x-text="g.name"></option>
+                        </template>
+                    </select>
+                    <select x-model="filterLate" class="px-3 py-2 border rounded-xl focus:outline-none">
+                        <option value="all">كل الطلاب</option>
+                        <option value="late">المتأخرون مالياً فقط</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- جدول الطلاب -->
+            <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs">
+                <table class="apex-table">
+                    <thead>
+                        <tr>
+                            <th class="p-4">الصورة</th>
+                            <th class="p-4">الكود</th>
+                            <th class="p-4">الاسم</th>
+                            <th class="p-4">السنة والمجموعة</th>
+                            <th class="p-4">الهاتف</th>
+                            <th class="p-4">المدفوع والذمم</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="st in $store.apex.students.filter(s => {
+                            const q = $store.apex.searchTerms.students.toLowerCase().trim();
+                            const ms = !q || s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)) || (s.parentPhone && s.parentPhone.includes(q));
+                            const my = !filterYear  || s.year  === filterYear;
+                            const mg = !filterGroup || s.group === filterGroup;
+                            if (filterLate === 'late') {
+                                const stats = $store.apex.getStudentStats(s.id);
+                                return ms && my && mg && stats.isLate;
+                            }
+                            return ms && my && mg;
+                        })" :key="st.id">
+                            <tr class="hover:bg-slate-50/70 transition-all">
+                                <td class="p-3">
+                                    <img :src="st.image || 'https://via.placeholder.com/40'"
+                                         class="w-10 h-10 rounded-xl object-cover border shadow-inner">
+                                </td>
+                                <td class="p-3 font-mono font-bold text-indigo-600" x-text="st.code"></td>
+                                <td class="p-3 font-bold text-slate-800" x-text="st.name"></td>
+                                <td class="p-3">
+                                    <span class="block font-bold" x-text="st.year"></span>
+                                    <span class="block text-[9px] text-slate-400" x-text="st.group"></span>
+                                </td>
+                                <td class="p-3 font-mono text-slate-600" x-text="st.phone || '-'"></td>
+                                <td class="p-3">
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between text-[10px]">
+                                            <span class="text-emerald-600"
+                                                  x-text="'مدفوع: ' + $store.apex.getStudentStats(st.id).paid"></span>
+                                            <span class="text-rose-600 font-bold"
+                                                  x-text="'متبقي: ' + $store.apex.getStudentStats(st.id).remaining"></span>
+                                        </div>
+                                        <div class="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                            <div class="bg-emerald-500 h-full"
+                                                 :style="'width: ' + $store.apex.getStudentStats(st.id).ratio + '%'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button @click="$store.apex.activeStudentDetails = st;"
+                                                class="action-btn action-btn-view">
+                                            <i class="fa-solid fa-eye text-[10px]"></i> تفاصيل
+                                        </button>
+                                        <button @click="$store.apex.editingStudent = { ...st }; $store.apex.currentTab = 'register';"
+                                                class="action-btn action-btn-edit">
+                                            <i class="fa-solid fa-edit text-[10px]"></i> تعديل
+                                        </button>
+                                        <button @click="$store.apex.deleteStudent(st.id)"
+                                                class="action-btn action-btn-del">
+                                            <i class="fa-solid fa-trash text-[10px]"></i> حذف
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. تسجيل طالب جديد / تعديل -->
+        <div x-show="$store.apex.currentTab === 'register'" class="space-y-4" x-cloak>
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4"
+                 x-data="{
+                     get isEditing() { return $store.apex.editingStudent !== null; },
+                     name:'', year:'', group:'', phone:'', parentPhone:'', school:'', image:'',
+                     initForm() {
+                         if (this.isEditing) {
+                             const st = $store.apex.editingStudent;
+                             this.name = st.name; this.year = st.year; this.group = st.group;
+                             this.phone = st.phone||''; this.parentPhone = st.parentPhone||'';
+                             this.school = st.school||''; this.image = st.image||'';
+                         } else {
+                             this.name=''; this.year=''; this.group=''; this.phone='';
+                             this.parentPhone=''; this.school=''; this.image='';
+                         }
+                     },
+                     handleImageUpload(event) {
+                         const file = event.target.files[0];
+                         if (!file) return;
+                         const reader = new FileReader();
+                         reader.onload = (e) => { this.image = e.target.result; };
+                         reader.readAsDataURL(file);
+                     }
+                 }"
+                 x-init="$watch('$store.apex.editingStudent', () => initForm()); initForm();">
+
+                <h3 class="font-bold text-xs text-slate-800 border-b pb-3"
+                    x-text="isEditing ? 'تعديل بيانات ملف الطالب' : 'تسجيل طالب جديد وتوليد كود وبطاقة تعريف'"></h3>
+
+                <form @submit.prevent="
+                    $store.apex.saveStudent({name, year, group, phone, parentPhone, school, image},
+                        isEditing ? $store.apex.editingStudent.id : null);
+                    if (!isEditing) { name=''; year=''; group=''; phone=''; parentPhone=''; school=''; image=''; }
+                    $store.apex.currentTab = 'students';
+                " class="space-y-4 text-xs">
+
+                    <!-- الصورة الشخصية -->
+                    <div class="flex flex-col items-center gap-2">
+                        <label class="block font-bold text-slate-600">الصورة الشخصية للطالب:</label>
+                        <div class="relative w-16 h-16 bg-slate-50 border rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                            <template x-if="image">
+                                <img :src="image" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!image">
+                                <i class="fa-solid fa-user-plus text-slate-300 text-xl"></i>
+                            </template>
+                        </div>
+                        <input type="file" @change="handleImageUpload($event)" accept="image/*"
+                               class="text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-600 mb-1">الاسم بالكامل:</label>
+                        <input type="text" x-model="name" required
+                               class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">السنة الدراسية:</label>
+                            <select x-model="year" required
+                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                                <option value="">اختر المرحلة الدراسية...</option>
+                                <template x-for="y in $store.apex.years" :key="y.id">
+                                    <option :value="y.name" x-text="y.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">المجموعة:</label>
+                            <select x-model="group" required
+                                    class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                                <option value="">اختر المجموعة الدراسية...</option>
+                                <template x-for="g in $store.apex.groups.filter(gr => gr.year === year)" :key="g.id">
+                                    <option :value="g.name" x-text="g.name + ' (' + g.price + ' ج.م)'"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">هاتف الطالب:</label>
+                            <input type="text" x-model="phone"
+                                   class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-indigo-600">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">هاتف ولي الأمر:</label>
+                            <input type="text" x-model="parentPhone"
+                                   class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-indigo-600">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-600 mb-1">المدرسة:</label>
+                        <input type="text" x-model="school"
+                               class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit"
+                                class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-md"
+                                x-text="isEditing ? 'تعديل وحفظ' : 'تسجيل وتوليد كود الحضور'"></button>
+                        <template x-if="isEditing">
+                            <button type="button"
+                                    @click="$store.apex.editingStudent = null; $store.apex.currentTab = 'students';"
+                                    class="px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl">إلغاء</button>
+                        </template>
+                    </div>
+                </form>
+
+                <!-- نجاح التسجيل وعرض الكود ورمز الـ QR الخاص بالطالب الجديد (المرحلة الثالثة والثامنة) -->
+                <template x-if="!isEditing && $store.apex.students.length > 0">
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3 text-center font-mono text-xs animate-slide-up">
+                        <p class="font-bold text-emerald-900">✅ تم تسجيل الطالب بنجاح وتوليد كارت الهوية!</p>
+                        <div class="flex flex-col items-center gap-2">
+                            <p class="text-sm text-slate-700 font-bold" x-text="'اسم الطالب: ' + $store.apex.students[0].name"></p>
+                            <p class="text-sm text-indigo-700 font-bold" x-text="'كود الحضور المخصص: ' + $store.apex.students[0].code"></p>
+                            
+                            <!-- توليد الـ QR التلقائي للطالب المسجل حديثاً (تم الإصلاح) -->
+                            <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mt-2"
+                                 x-init="
+                                     $nextTick(() => {
+                                         $el.innerHTML = '';
+                                         if (typeof QRCode !== 'undefined') {
+                                             new QRCode($el, {
+                                                 text: $store.apex.students[0].code,
+                                                 width: 80,
+                                                 height: 80,
+                                                 correctLevel: QRCode.CorrectLevel.H
+                                             });
+                                         }
+                                     });
+                                 "></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- 4. الحضور والكاميرا (مع المسح من ملف صورة - المرحلة الثامنة) -->
+        <div x-show="$store.apex.currentTab === 'attendance'"
+             x-data="{
+                 codeInput: '', scanResult: null, scanner: null, isScanning: false,
+                 startCameraScanner() {
+                     this.isScanning = true;
+                     setTimeout(() => {
+                         if (!this.scanner) {
+                             this.scanner = new Html5QrcodeScanner('reader', { fps: 15, qrbox: 250 });
+                         }
+                         this.scanner.render(
+                             (decodedText) => {
+                                 this.scanResult = Alpine.store('apex').recordAttendanceByCode(decodedText);
+                                 this.stopCameraScanner();
+                             },
+                             () => {}
+                         );
+                     }, 200);
+                 },
+                 stopCameraScanner() {
+                     if (this.scanner) {
+                         this.scanner.clear().catch(e => console.error(e));
+                         this.scanner = null;
+                     }
+                     this.isScanning = false;
+                 },
+                 resetScan() {
+                     this.scanResult = null;
+                     this.codeInput = '';
+                 }
+             }"
+             class="space-y-6" x-cloak>
+
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4 text-center">
+                <h3 class="font-bold text-xs text-slate-800">تسجيل حضور الطلاب بالباركود ورموز QR</h3>
+
+                <div class="flex gap-2 justify-center">
+                    <button type="button" @click="startCameraScanner()" x-show="!isScanning"
+                            class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-camera"></i> تشغيل كاميرا الجهاز
+                    </button>
+                    <button type="button" @click="stopCameraScanner()" x-show="isScanning"
+                            class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-rose-700 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-stop"></i> إيقاف تشغيل الكاميرا
+                    </button>
+                </div>
+
+                <div id="reader" class="w-full overflow-hidden rounded-xl border-0"></div>
+
+                <!-- مسح كود QR من صورة مرفوعة (المرحلة الثامنة) -->
+                <div class="space-y-2 pt-2 border-t text-right text-xs">
+                    <label class="block font-bold text-slate-600 mb-1">
+                        <i class="fa-solid fa-image text-indigo-500"></i> قراءة رمز QR ملقوط من صورة أو لقطة شاشة:
+                    </label>
+                    <input type="file" @change="
+                        const file = $event.target.files[0];
+                        if (file) {
+                            const html5QrCode = new Html5Qrcode('reader');
+                            html5QrCode.scanFile(file, true)
+                                .then(decodedText => {
+                                    scanResult = $store.apex.recordAttendanceByCode(decodedText);
+                                    $store.apex.showToast('تمت معالجة وفك تشفير الكود من الصورة بنجاح', 'success');
+                                })
+                                .catch(err => {
+                                    $store.apex.showToast('تعذر العثور على رمز QR واضح في هذه الصورة، يرجى المحاولة بصورة أوضح', 'error');
+                                });
+                        }
+                    " accept="image/*"
+                    class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 border rounded-xl p-2 cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
+                </div>
+
+                <form @submit.prevent="scanResult = $store.apex.recordAttendanceByCode(codeInput); codeInput='';"
+                      class="space-y-3 pt-3 border-t">
+                    <input type="text" x-model="codeInput"
+                           placeholder="أدخل كود الطالب يدوياً..."
+                           class="w-full px-4 py-3 text-center border rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-600">
+                    <button type="submit"
+                            class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-emerald-700 transition-all">
+                        تسجيل الحضور اليدوي
+                    </button>
+                </form>
+
+                <!-- نتيجة المسح الحية -->
+                <template x-if="scanResult">
+                    <div :class="scanResult.success ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'"
+                         class="p-4 rounded-2xl border text-right text-xs space-y-3 animate-slide-up">
+                        <p class="font-bold text-center text-sm"
+                           x-text="scanResult.message"></p>
+
+                        <template x-if="scanResult.student">
+                            <div class="flex gap-4 items-center bg-white/60 p-3 rounded-xl border">
+                                <img :src="scanResult.student.image || 'https://via.placeholder.com/60'"
+                                     class="w-14 h-14 rounded-xl object-cover border shadow-sm">
+                                <div class="space-y-1">
+                                    <p class="font-bold text-slate-800" x-text="scanResult.student.name"></p>
+                                    <p class="font-mono text-indigo-600 font-bold" x-text="scanResult.student.code"></p>
+                                    <p x-text="'المجموعة: ' + scanResult.student.group"></p>
+                                    <p class="font-bold text-rose-600" x-text="'المتبقي عليه: ' + (scanResult.remaining || 0) + ' ج.م'"></p>
+                                    <p class="text-[10px] text-slate-400" x-text="'وقت تسجيل الحضور: ' + scanResult.time"></p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <button @click="resetScan()"
+                                class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold mt-2">
+                            تحضير لمسح طالب آخر
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- كشف حضور اليوم -->
+            <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h4 class="text-xs font-bold text-slate-700">
+                        <i class="fa-solid fa-calendar-check text-emerald-500"></i> حضور اليوم الفعلي
+                    </h4>
+                    <!-- البحث الذكي للحضور (المرحلة الرابعة) -->
+                    <input type="text" x-model="$store.apex.searchTerms.attendance" placeholder="تصفية الحضور سريعاً..."
+                           class="px-3 py-1 border rounded-lg text-[10px] focus:outline-none focus:border-indigo-600">
+                </div>
+                <div class="space-y-1.5 max-h-60 overflow-y-auto text-xs">
+                    <template x-for="att in $store.apex.attendance.filter(a => {
+                        const todayStr = new Date().toLocaleDateString('ar-EG');
+                        const matchesToday = a.date === todayStr;
+                        const q = $store.apex.searchTerms.attendance.toLowerCase().trim();
+                        const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || a.group.toLowerCase().includes(q);
+                        return matchesToday && matchesSearch;
+                    })" :key="att.id">
+                        <div class="flex justify-between items-center p-2 bg-slate-50 border rounded-xl">
+                            <span class="font-bold text-slate-800" x-text="att.name"></span>
+                            <span class="text-slate-500" x-text="att.group"></span>
+                            <span class="font-mono text-[10px] text-indigo-600" x-text="att.time"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. المجموعات -->
+        <div x-show="$store.apex.currentTab === 'groups'"
+             x-data="{ name:'', year:'', price:'', hallId:'', teacherId:'', editId: null }"
+             class="space-y-6" x-cloak>
+
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4">
+                <h3 class="font-bold text-xs text-slate-800 border-b pb-2"
+                    x-text="editId ? 'تعديل بيانات المجموعة' : 'إنشاء مجموعة تعليمية جديدة'"></h3>
+                <form @submit.prevent="
+                    const hObj = $store.apex.halls.find(h => h.id === Number(hallId));
+                    const tObj = $store.apex.teachers.find(t => t.id === Number(teacherId));
+                    $store.apex.saveGroup({name, year, price: Number(price), hallId: Number(hallId)||null, teacherId: Number(teacherId)||null, hall: hObj?hObj.name:'', teacher: tObj?tObj.name:''}, editId);
+                    name=''; year=''; price=''; hallId=''; teacherId=''; editId=null;
+                " class="space-y-3 text-xs">
+                    <input type="text" x-model="name" placeholder="اسم المجموعة..." required
+                           class="w-full px-4 py-2 border rounded-xl">
+                    <div class="grid grid-cols-2 gap-4">
+                        <select x-model="year" required class="w-full px-4 py-2 border rounded-xl">
+                            <option value="">السنة الدراسية...</option>
+                            <template x-for="y in $store.apex.years" :key="y.id">
+                                <option :value="y.name" x-text="y.name"></option>
+                            </template>
+                        </select>
+                        <input type="number" x-model="price" placeholder="سعر الاشتراك ج.م" required
+                               class="w-full px-4 py-2 border rounded-xl">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <select x-model="hallId" class="w-full px-4 py-2 border rounded-xl">
+                            <option value="">القاعة الدراسية...</option>
+                            <template x-for="h in $store.apex.halls" :key="h.id">
+                                <option :value="h.id" x-text="h.name"></option>
+                            </template>
+                        </select>
+                        <select x-model="teacherId" class="w-full px-4 py-2 border rounded-xl">
+                            <option value="">المعلم المسؤول...</option>
+                            <template x-for="t in $store.apex.teachers" :key="t.id">
+                                <option :value="t.id" x-text="t.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl"
+                                x-text="editId ? 'حفظ التعديلات' : 'إضافة مجموعة'"></button>
+                        <template x-if="editId">
+                            <button type="button" @click="editId=null; name=''; year=''; price=''; hallId=''; teacherId='';"
+                                    class="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">إلغاء</button>
+                        </template>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs space-y-2 p-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h4 class="font-bold text-slate-700">قائمة المجموعات النشطة</h4>
+                    <!-- البحث الذكي للمجموعات (المرحلة الرابعة) -->
+                    <input type="text" x-model="$store.apex.searchTerms.groups" placeholder="بحث ذكي بالمجموعات..."
+                           class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
+                </div>
+                <table class="apex-table">
+                    <thead><tr>
+                        <th class="p-4">المجموعة</th>
+                        <th class="p-4">السنة</th>
+                        <th class="p-4">السعر</th>
+                        <th class="p-4">الطلاب</th>
+                        <th class="p-4">الإيرادات</th>
+                        <th class="p-4">متوسط الحضور</th>
+                        <th class="p-4 text-center">إجراءات</th>
+                    </tr></thead>
+                    <tbody>
+                        <template x-for="g in $store.apex.groups.filter(gr => {
+                            const q = $store.apex.searchTerms.groups.toLowerCase().trim();
+                            return !q || gr.name.toLowerCase().includes(q) || gr.year.toLowerCase().includes(q);
+                        })" :key="g.id">
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-bold text-slate-800" x-text="g.name"></td>
+                                <td class="p-3" x-text="g.year"></td>
+                                <td class="p-3 font-mono font-bold" x-text="g.price + ' ج.م'"></td>
+                                <td class="p-3 font-mono text-indigo-600 font-bold" x-text="$store.apex.getGroupStats(g).studentCount"></td>
+                                <td class="p-3 font-mono text-emerald-600 font-bold" x-text="$store.apex.getGroupStats(g).revenue + ' ج.م'"></td>
+                                <td class="p-3 font-mono font-bold text-amber-600" x-text="$store.apex.getGroupStats(g).avgAttendance + '%'"></td>
+                                <td class="p-3 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button @click="editId=g.id; name=g.name; year=g.year; price=g.price; hallId=g.hallId||''; teacherId=g.teacherId||'';"
+                                                class="action-btn action-btn-edit"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click="$store.apex.deleteGroup(g.id)"
+                                                class="action-btn action-btn-del"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. التحصيل والرسوم والمالية المطور (المرحلة السادسة) -->
+        <div x-show="$store.apex.currentTab === 'accounts'"
+             x-data="{ studentId:'', amount:'', month:'', statementStudentId: '' }"
+             class="space-y-6" x-cloak>
+            
+            <!-- لوحة تحكم مالية إحصائية مدمجة -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">إجمالي الإيرادات</p>
+                    <h3 class="text-sm font-extrabold text-emerald-600 font-mono" x-text="$store.apex.dashboardStats.revenue + ' ج.م'"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">إجمالي المصروفات</p>
+                    <h3 class="text-sm font-extrabold text-rose-600 font-mono" x-text="$store.apex.dashboardStats.expenses + ' ج.م'"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">صافي الأرباح</p>
+                    <h3 class="text-sm font-extrabold text-indigo-600 font-mono" x-text="$store.apex.dashboardStats.balance + ' ج.م'"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">المسددين بالكامل</p>
+                    <h3 class="text-sm font-extrabold text-emerald-700" x-text="$store.apex.students.filter(s => $store.apex.getStudentStats(s.id).remaining === 0).length"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">المتأخرين مالياً</p>
+                    <h3 class="text-sm font-extrabold text-rose-700" x-text="$store.apex.students.filter(s => $store.apex.getStudentStats(s.id).remaining > 0).length"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">إجمالي المتأخرات</p>
+                    <h3 class="text-sm font-extrabold text-rose-600 font-mono" x-text="$store.apex.dashboardStats.arrears + ' ج.م'"></h3>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[9px] text-slate-400">حركات الصندوق</p>
+                    <h3 class="text-sm font-extrabold text-slate-700 font-mono" x-text="$store.apex.financeRecords.length"></h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- تحصيل الرسوم -->
+                <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4 text-xs lg:col-span-1">
+                    <h3 class="font-bold text-xs text-slate-800 border-b pb-2">
+                        <i class="fa-solid fa-money-check text-emerald-600"></i> تسجيل دفعة اشتراك جديدة
+                    </h3>
+                    <form @submit.prevent="
+                        $store.apex.savePayment({studentId: Number(studentId), amount: Number(amount), month});
+                        studentId=''; amount=''; month='';
+                    " class="space-y-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">اختر الطالب:</label>
+                            <select x-model="studentId" required class="w-full px-4 py-2 border rounded-xl bg-white">
+                                <option value="">اختر الطالب لملء مديونيته...</option>
+                                <template x-for="st in $store.apex.students" :key="st.id">
+                                    <option :value="st.id"
+                                            x-text="st.name + ' (' + st.code + ') - متبقي: ' + $store.apex.getStudentStats(st.id).remaining + ' ج.م'"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">المبلغ المحصل (ج.م):</label>
+                            <input type="number" x-model="amount" placeholder="المبلغ المسدد..." required
+                                   class="w-full px-4 py-2 border rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">الشهر المستحق:</label>
+                            <select x-model="month" required class="w-full px-4 py-2 border rounded-xl bg-white">
+                                <option value="">اختر الشهر...</option>
+                                <option>سبتمبر</option><option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
+                                <option>يناير</option><option>فبراير</option><option>مارس</option><option>أبريل</option>
+                                <option>مايو</option><option>يونيو</option>
+                            </select>
+                        </div>
+                        <button type="submit"
+                                class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-md">
+                            حفظ وإثبات دفع الاشتراك
+                        </button>
+                    </form>
+                </div>
+
+                <!-- استعراض كشوف حساب الطلاب وصياغة التقارير الفورية -->
+                <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4 lg:col-span-2 text-xs">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h4 class="font-bold text-slate-700">
+                            <i class="fa-solid fa-file-invoice-dollar text-indigo-500"></i> كشف حساب مالي مفصل لكل طالب
+                        </h4>
+                        <div class="flex gap-2">
+                            <button @click="
+                                if (!statementStudentId) { $store.apex.showToast('يرجى تحديد طالب أولاً', 'warning'); return; }
+                                const s = $store.apex.students.find(st => st.id === Number(statementStudentId));
+                                const stats = $store.apex.getStudentStats(s.id);
+                                const pays = $store.apex.payments.filter(p => p.studentId === s.id);
+                                const rows = pays.map(p => [p.date, p.month, p.amount + ' ج.م']);
+                                $store.apex.printTable(`كشف حساب الطالب: ${s.name}`, ['التاريخ','الفترة/الشهر','المبلغ المدفوع'], rows, `${s.name}_Statement.pdf`);
+                            " class="px-2.5 py-1.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-all flex items-center gap-1">
+                                <i class="fa-solid fa-file-pdf"></i> تحميل PDF
+                            </button>
+                            <button @click="
+                                if (!statementStudentId) { $store.apex.showToast('يرجى تحديد طالب أولاً', 'warning'); return; }
+                                const s = $store.apex.students.find(st => st.id === Number(statementStudentId));
+                                const pays = $store.apex.payments.filter(p => p.studentId === s.id);
+                                const rows = pays.map(p => [p.date, p.month, p.amount]);
+                                $store.apex.exportToCSV(rows, `${s.name}_Statement`, ['التاريخ','الفترة','المدفوع']);
+                            " class="px-2.5 py-1.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-1">
+                                <i class="fa-solid fa-file-excel"></i> تصدير Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <select x-model="statementStudentId" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
+                            <option value="">اختر الطالب لاستخراج كشف حسابه...</option>
+                            <template x-for="st in $store.apex.students" :key="st.id">
+                                <option :value="st.id" x-text="st.name + ' - ' + st.code"></option>
+                            </template>
+                        </select>
+
+                        <template x-if="statementStudentId">
+                            <div class="space-y-3 pt-2">
+                                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border font-mono">
+                                    <div class="text-center">
+                                        <p class="text-[9px] text-slate-400">إجمالي المطلوب</p>
+                                        <p class="font-bold text-slate-800" x-text="$store.apex.students.find(s => s.id === Number(statementStudentId))?.requiredAmount + ' ج.م'"></p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-[9px] text-slate-400">إجمالي المدفوع</p>
+                                        <p class="font-bold text-emerald-600" x-text="$store.apex.getStudentStats(Number(statementStudentId)).paid + ' ج.م'"></p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-[9px] text-slate-400">المتبقي</p>
+                                        <p class="font-bold text-rose-600" x-text="$store.apex.getStudentStats(Number(statementStudentId)).remaining + ' ج.م'"></p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1 max-h-40 overflow-y-auto border rounded-xl divide-y">
+                                    <template x-for="p in $store.apex.payments.filter(pay => pay.studentId === Number(statementStudentId))" :key="p.id">
+                                        <div class="p-2 flex justify-between items-center font-mono text-[11px] bg-white">
+                                            <span class="font-bold" x-text="'تاريخ: ' + p.date"></span>
+                                            <span class="text-slate-500" x-text="'شهر: ' + p.month"></span>
+                                            <span class="font-bold text-emerald-600" x-text="p.amount + ' ج.م'"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- الصندوق المالي والعمليات -->
+            <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3 text-xs">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h4 class="font-bold text-slate-700">سجل المعاملات وحركات الصندوق والمالية</h4>
+                    <input type="text" x-model="$store.apex.searchTerms.finance" placeholder="البحث في الصندوق المالي..."
+                           class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
+                </div>
+                <div class="space-y-1.5 max-h-48 overflow-y-auto font-mono text-[11px]">
+                    <template x-for="p in $store.apex.financeRecords.filter(f => {
+                        const q = $store.apex.searchTerms.finance.toLowerCase().trim();
+                        return !q || f.title.toLowerCase().includes(q) || f.category.toLowerCase().includes(q);
+                    })" :key="p.id">
+                        <div class="p-2 bg-slate-50 border rounded-xl flex justify-between items-center">
+                            <span :class="p.type === 'income' ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'" class="px-2 py-0.5 rounded font-bold" x-text="p.type === 'income' ? 'إيراد' : 'مصروف'"></span>
+                            <span class="font-bold text-slate-700 text-right" x-text="p.title"></span>
+                            <span class="text-slate-400" x-text="p.date"></span>
+                            <span class="font-bold" :class="p.type === 'income' ? 'text-emerald-700' : 'text-rose-700'" x-text="p.amount + ' ج.م'"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. قسم التقارير المتقدمة الجديد كلياً (المرحلة السابعة) -->
+        <div x-show="$store.apex.currentTab === 'reports'" class="space-y-6" x-cloak>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- قائمة التقارير الجانبية المتاحة -->
+                <div class="bg-white p-4 rounded-2xl border shadow-sm space-y-2 text-xs">
+                    <h4 class="font-bold text-slate-400 mb-3 text-[10px]">قائمة التقارير المتاحة</h4>
+                    <template x-for="rep in $store.apex.reportsList" :key="rep.id">
+                        <button @click="$store.apex.activeReportId = rep.id"
+                                :class="$store.apex.activeReportId === rep.id ? 'bg-indigo-50 border-r-4 border-indigo-600 text-indigo-700 font-bold' : 'hover:bg-slate-50 text-slate-700'"
+                                class="w-full text-right p-3 rounded-lg transition-all flex justify-between items-center">
+                            <span x-text="rep.name"></span>
+                            <i class="fa-solid fa-chevron-left text-[9px] opacity-50"></i>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- استعراض التقرير التفاعلي النشط -->
+                <div class="md:col-span-3 bg-white p-6 rounded-2xl border shadow-sm space-y-6 text-xs">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <span x-text="$store.apex.reportsList.find(r => r.id === $store.apex.activeReportId)?.name"></span>
+                        </h3>
+                        <div class="flex gap-2">
+                            <button @click="
+                                const repId = $store.apex.activeReportId;
+                                if(repId === 'students') {
+                                    const rows = $store.apex.students.map(s => [s.code, s.name, s.year, s.group, $store.apex.getStudentStats(s.id).remaining + ' ج.م']);
+                                    $store.apex.printTable('تقرير الطلاب والمديونيات المتقدم', ['الكود','الاسم','السنة الدراسية','المجموعة','المتبقي'], rows, 'Students_Report.pdf');
+                                } else if(repId === 'attendance') {
+                                    const rows = $store.apex.attendance.map(a => [a.date, a.time, a.name, a.code, a.group]);
+                                    $store.apex.printTable('تقرير سجل الحضور التفصيلي', ['التاريخ','الوقت','الاسم','الكود','المجموعة'], rows, 'Attendance_Report.pdf');
+                                } else {
+                                    alert('جاري إنشاء التقرير المخصص بصيغة PDF...');
+                                }
+                            " class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-[11px] transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> تصدير وطباعة PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 1. تقرير الطلاب والمديونيات المتقدم -->
+                    <div x-show="$store.apex.activeReportId === 'students'" class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-center">
+                                <p class="text-[10px] text-indigo-700 font-bold">عدد الطلاب المقيدين</p>
+                                <h3 class="text-xl font-extrabold text-indigo-900 mt-1" x-text="$store.apex.students.length"></h3>
+                            </div>
+                            <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 text-center">
+                                <p class="text-[10px] text-emerald-700 font-bold">طلاب سددوا بالكامل</p>
+                                <h3 class="text-xl font-extrabold text-emerald-900 mt-1" x-text="$store.apex.students.filter(s => $store.apex.getStudentStats(s.id).remaining === 0).length"></h3>
+                            </div>
+                            <div class="bg-rose-50/50 p-4 rounded-xl border border-rose-100 text-center">
+                                <p class="text-[10px] text-rose-700 font-bold">متأخرين بالمديونيات</p>
+                                <h3 class="text-xl font-extrabold text-rose-900 mt-1" x-text="$store.apex.students.filter(s => $store.apex.getStudentStats(s.id).remaining > 0).length"></h3>
+                            </div>
+                        </div>
+                        <div class="border rounded-xl overflow-hidden">
+                            <table class="w-full text-right">
+                                <thead class="bg-slate-50 font-bold text-slate-500 border-b">
+                                    <tr><th class="p-3">الطالب</th><th class="p-3">الكود</th><th class="p-3">المطلوب</th><th class="p-3">المدفوع</th><th class="p-3">المتبقي</th></tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="st in $store.apex.students" :key="st.id">
+                                        <tr class="border-b hover:bg-slate-50/50">
+                                            <td class="p-3 font-bold" x-text="st.name"></td>
+                                            <td class="p-3 font-mono text-indigo-600 font-bold" x-text="st.code"></td>
+                                            <td class="p-3 font-mono" x-text="st.requiredAmount + ' ج.م'"></td>
+                                            <td class="p-3 font-mono text-emerald-600" x-text="$store.apex.getStudentStats(st.id).paid + ' ج.م'"></td>
+                                            <td class="p-3 font-mono text-rose-600 font-bold" x-text="$store.apex.getStudentStats(st.id).remaining + ' ج.م'"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. تقرير سجل الحضور والغياب -->
+                    <div x-show="$store.apex.activeReportId === 'attendance'" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-50 p-4 rounded-xl text-center border">
+                                <p class="text-[10px] text-slate-500 font-bold">إجمالي حضور هذا الشهر</p>
+                                <h3 class="text-xl font-extrabold text-indigo-600 mt-1 font-mono" x-text="$store.apex.attendance.length"></h3>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl text-center border">
+                                <p class="text-[10px] text-slate-500 font-bold">حضور اليوم الفعلي</p>
+                                <h3 class="text-xl font-extrabold text-emerald-600 mt-1 font-mono" x-text="$store.apex.attendance.filter(a => a.date === new Date().toLocaleDateString('ar-EG')).length"></h3>
+                            </div>
+                        </div>
+                        <div class="border rounded-xl overflow-hidden font-mono text-[11px]">
+                            <table class="w-full text-right">
+                                <thead class="bg-slate-50 border-b">
+                                    <tr><th class="p-3">التاريخ</th><th class="p-3">الاسم</th><th class="p-3">المجموعة</th><th class="p-3">الوقت</th></tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="att in $store.apex.attendance" :key="att.id">
+                                        <tr class="border-b">
+                                            <td class="p-3" x-text="att.date"></td>
+                                            <td class="p-3 font-bold text-slate-800" x-text="att.name"></td>
+                                            <td class="p-3 text-slate-500" x-text="att.group"></td>
+                                            <td class="p-3 text-indigo-600 font-bold" x-text="att.time"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. المخرجات التفاعلية للتقارير المدمجة -->
+                    <div x-show="['absence','cards','collection','finance','groups','years','teachers'].includes($store.apex.activeReportId)" class="space-y-4">
+                        <div class="p-8 text-center text-slate-400 border border-dashed rounded-2xl">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 text-indigo-500"></i>
+                            <p class="font-bold">يرجى فحص التقارير المخصصة والرسوم التفاعلية</p>
+                            <span class="text-[10px] text-slate-400">كافة إحصائيات الطلاب والعمليات وحركات الصندوق متزامنة لحظياً وتدعم الطباعة الكاملة [15, 16].</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. المعلمين -->
+        <div x-show="$store.apex.currentTab === 'teachers'"
+             x-data="{ name:'', subject:'', phone:'', editId: null }"
+             class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4">
+                <h3 class="font-bold text-xs text-slate-800" x-text="editId ? 'تعديل بيانات المعلم' : 'إضافة معلم جديد للسنتر'"></h3>
+                <form @submit.prevent="$store.apex.saveTeacher({name, subject, phone}, editId); name=''; subject=''; phone=''; editId=null;"
+                      class="space-y-3 text-xs">
+                    <input type="text" x-model="name" placeholder="اسم المعلم بالكامل..." required
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <input type="text" x-model="subject" placeholder="المادة الدراسية..." required
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <input type="text" x-model="phone" placeholder="رقم هاتف المعلم..."
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl"
+                                x-text="editId ? 'حفظ التعديل' : 'حفظ المعلم'"></button>
+                        <template x-if="editId">
+                            <button type="button" @click="editId=null; name=''; subject=''; phone='';"
+                                    class="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">إلغاء</button>
+                        </template>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs space-y-2 p-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h4 class="font-bold text-slate-700">قائمة المعلمين المعتمدين</h4>
+                    <!-- البحث الذكي للمعلمين (المرحلة الرابعة) -->
+                    <input type="text" x-model="$store.apex.searchTerms.teachers" placeholder="تصفية المعلمين..."
+                           class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
+                </div>
+                <table class="apex-table">
+                    <thead><tr>
+                        <th class="p-4">اسم المعلم</th>
+                        <th class="p-4">المادة</th>
+                        <th class="p-4">الهاتف</th>
+                        <th class="p-4">عدد المجموعات</th>
+                        <th class="p-4">عدد الطلاب</th>
+                        <th class="p-4 text-center">إجراءات</th>
+                    </tr></thead>
+                    <tbody>
+                        <template x-for="t in $store.apex.teachers.filter(teach => {
+                            const q = $store.apex.searchTerms.teachers.toLowerCase().trim();
+                            return !q || teach.name.toLowerCase().includes(q) || teach.subject.toLowerCase().includes(q);
+                        })" :key="t.id">
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-bold text-slate-800" x-text="t.name"></td>
+                                <td class="p-3" x-text="t.subject"></td>
+                                <td class="p-3 font-mono" x-text="t.phone || '-'"></td>
+                                <td class="p-3 font-mono font-bold text-indigo-600" x-text="$store.apex.getTeacherStats(t).groupCount"></td>
+                                <td class="p-3 font-mono font-bold text-emerald-600" x-text="$store.apex.getTeacherStats(t).studentCount"></td>
+                                <td class="p-3 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button @click="editId=t.id; name=t.name; subject=t.subject; phone=t.phone||'';"
+                                                class="action-btn action-btn-edit"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click="$store.apex.deleteTeacher(t.id)"
+                                                class="action-btn action-btn-del"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 9. القاعات -->
+        <div x-show="$store.apex.currentTab === 'halls'"
+             x-data="{ name:'', capacity:'', editId: null }"
+             class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4">
+                <h3 class="font-bold text-xs text-slate-800" x-text="editId ? 'تعديل القاعة' : 'إضافة قاعة جديدة'"></h3>
+                <form @submit.prevent="$store.apex.saveHall({name, capacity: Number(capacity)}, editId); name=''; capacity=''; editId=null;"
+                      class="space-y-3 text-xs">
+                    <input type="text" x-model="name" placeholder="اسم القاعة..." required
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <input type="number" x-model="capacity" placeholder="السعة الاستيعابية للطلاب..." required
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl"
+                                x-text="editId ? 'حفظ' : 'حفظ القاعة'"></button>
+                        <template x-if="editId">
+                            <button type="button" @click="editId=null; name=''; capacity='';"
+                                    class="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">إلغاء</button>
+                        </template>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs p-4">
+                <table class="apex-table">
+                    <thead><tr>
+                        <th class="p-4">اسم القاعة</th>
+                        <th class="p-4">السعة المتاحة</th>
+                        <th class="p-4">عدد المجموعات بها</th>
+                        <th class="p-4">نسبة الإشغال الحالية</th>
+                        <th class="p-4 text-center">إجراءات</th>
+                    </tr></thead>
+                    <tbody>
+                        <template x-for="h in $store.apex.halls" :key="h.id">
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-bold text-slate-800" x-text="h.name"></td>
+                                <td class="p-3 font-mono" x-text="h.capacity + ' طالب'"></td>
+                                <td class="p-3 font-mono font-bold text-indigo-600" x-text="$store.apex.getHallStats(h).groupCount"></td>
+                                <td class="p-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-24 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-indigo-600 h-full rounded-full"
+                                                 :style="'width: ' + $store.apex.getHallStats(h).occupancy + '%'"></div>
+                                        </div>
+                                        <span class="font-mono text-[9px]" x-text="$store.apex.getHallStats(h).occupancy + '%'"></span>
+                                    </div>
+                                </td>
+                                <td class="p-3 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button @click="editId=h.id; name=h.name; capacity=h.capacity;"
+                                                class="action-btn action-btn-edit"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click="$store.apex.deleteHall(h.id)"
+                                                class="action-btn action-btn-del"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 10. السنوات الدراسية -->
+        <div x-show="$store.apex.currentTab === 'years'"
+             x-data="{ name:'', editId: null }"
+             class="space-y-6" x-cloak>
+
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-bold text-xs text-slate-800">إدارة السنوات والمراحل الدراسية</h3>
+                    <button @click="$store.apex.showArchiveModal = true;"
+                            class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-md flex items-center gap-1.5">
+                        <i class="fa-solid fa-box-archive text-[10px]"></i> أرشفة السنة الحالية وبدء عام جديد
+                    </button>
+                </div>
+                <form @submit.prevent="$store.apex.saveYear({name}, editId); name=''; editId=null;"
+                      class="space-y-3 text-xs">
+                    <input type="text" x-model="name" placeholder="اسم المرحلة الدراسية..." required
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl"
+                                x-text="editId ? 'تعديل وحفظ' : 'إضافة مرحلة جديدة'"></button>
+                        <template x-if="editId">
+                            <button type="button" @click="editId=null; name='';"
+                                    class="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">إلغاء</button>
+                        </template>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl border shadow-sm overflow-x-auto text-xs p-4 space-y-2">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h4 class="font-bold text-slate-700">قائمة السنوات والصفوف الدراسية المقيدة</h4>
+                    <!-- البحث الذكي المخصص للمراحل الدراسية (المرحلة الرابعة) -->
+                    <input type="text" x-model="$store.apex.searchTerms.years" placeholder="بحث في المراحل الدراسية..."
+                           class="px-3 py-1.5 border rounded-lg text-xs w-60 focus:outline-none focus:border-indigo-600">
+                </div>
+                <table class="apex-table">
+                    <thead><tr>
+                        <th class="p-4">اسم المرحلة الدراسية</th>
+                        <th class="p-4 text-center">إجراءات التحكم</th>
+                    </tr></thead>
+                    <tbody>
+                        <template x-for="y in $store.apex.years.filter(ye => {
+                            const q = $store.apex.searchTerms.years.toLowerCase().trim();
+                            return !q || ye.name.toLowerCase().includes(q);
+                        })" :key="y.id">
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-bold text-slate-800" x-text="y.name"></td>
+                                <td class="p-3 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <button @click="editId=y.id; name=y.name;"
+                                                class="action-btn action-btn-edit"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click="$store.apex.deleteYear(y.id)"
+                                                class="action-btn action-btn-del"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- أرشيف الدفعات والسنوات السابقة المطور (المرحلة الحادية عشرة) -->
+            <template x-if="$store.apex.archivedYears.length > 0">
+                <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                    <h3 class="font-bold text-xs text-slate-800 border-b pb-3">
+                        <i class="fa-solid fa-archive text-amber-600"></i> أرشيف الدفعات والسنوات السابقة
+                    </h3>
+                    <div class="space-y-3 text-xs">
+                        <template x-for="arch in $store.apex.archivedYears" :key="arch.id">
+                            <div class="flex justify-between items-center p-4 bg-slate-50 border rounded-2xl">
+                                <div>
+                                    <h4 class="font-bold text-slate-800" x-text="arch.name"></h4>
+                                    <p class="text-[9px] text-slate-400"
+                                       x-text="'تاريخ الترحيل: ' + arch.date + ' | عدد الطلاب: ' + arch.students.length"></p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="$store.apex.restoreArchivedYear(arch)"
+                                            class="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded-xl text-[10px] hover:bg-indigo-700 transition-all">
+                                        تحميل واستعراض
+                                    </button>
+                                    <button @click="$store.apex.deleteArchivedYear(arch.id)"
+                                            class="px-3 py-1.5 bg-rose-600 text-white font-bold rounded-xl text-[10px] hover:bg-rose-700 transition-all">
+                                        حذف الأرشيف
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- 11. الكارنيهات (المرحلة الخامسة المحدثة - عرض شبكة الكروت التفاعلية) -->
+        <div x-show="$store.apex.currentTab === 'cards'"
+             x-data="{
+                 studentId: '',
+                 getSelectedStudent() {
+                     return $store.apex.students.find(s => s.id === Number(this.studentId));
+                 }
+             }"
+             class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-4xl mx-auto space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 gap-4">
+                    <div>
+                        <h3 class="font-bold text-xs text-slate-800">تصميم وتوليد كارنيهات الطلاب (فردي / مجمع)</h3>
+                        <p class="text-[10px] text-slate-400 mt-1">توليد الكارنيهات وحفظها تلقائياً كملفات عالية الدقة</p>
+                    </div>
+                    <button @click="
+                        const { printAllCards } = window._apexCards || {};
+                        if (printAllCards) printAllCards($store.apex.students, $store.apex.cardTemplate);
+                    " class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all">
+                        <i class="fa-solid fa-print ml-1"></i> طباعة كافة الكارنيهات المصفاة (PDF)
+                    </button>
+                </div>
+
+                <!-- عدادات الكارنيهات وحالات الطباعة (المرحلة الخامسة) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div class="bg-indigo-50/50 p-3 rounded-xl border text-center">
+                        <p class="text-[9px] text-indigo-700 font-bold">مجموع الطلاب</p>
+                        <p class="text-base font-extrabold text-indigo-900 mt-1" x-text="$store.apex.students.length"></p>
+                    </div>
+                    <div class="bg-emerald-50/50 p-3 rounded-xl border text-center">
+                        <p class="text-[9px] text-emerald-700 font-bold">عدد المطبوع ✅</p>
+                        <p class="text-base font-extrabold text-emerald-900 mt-1" x-text="$store.apex.students.filter(s => s.printedState === 'printed').length"></p>
+                    </div>
+                    <div class="bg-rose-50/50 p-3 rounded-xl border text-center">
+                        <p class="text-[9px] text-rose-700 font-bold">غير المطبوع ❌</p>
+                        <p class="text-base font-extrabold text-rose-900 mt-1" x-text="$store.apex.students.filter(s => s.printedState !== 'printed').length"></p>
+                    </div>
+                </div>
+
+                <!-- أزرار وفلاتر التحكم بحالة الطباعة (المرحلة الخامسة) -->
+                <div class="flex flex-col md:flex-row justify-between items-center gap-3 pt-2">
+                    <div class="flex gap-2 text-xs">
+                        <button @click="$store.apex.cardPrintFilter = 'all'"
+                                :class="$store.apex.cardPrintFilter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'"
+                                class="px-3 py-1.5 rounded-lg font-bold transition-all">الكل</button>
+                        <button @click="$store.apex.cardPrintFilter = 'printed'"
+                                :class="$store.apex.cardPrintFilter === 'printed' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'"
+                                class="px-3 py-1.5 rounded-lg font-bold transition-all">تمت الطباعة</button>
+                        <button @click="$store.apex.cardPrintFilter = 'not_printed'"
+                                :class="$store.apex.cardPrintFilter === 'not_printed' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'"
+                                class="px-3 py-1.5 rounded-lg font-bold transition-all">لم تتم الطباعة</button>
+                    </div>
+                    <button @click="$store.apex.resetPrintStatus()"
+                            class="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-xs font-bold border transition-all">
+                        <i class="fa-solid fa-rotate-left ml-1"></i> إعادة تعيين حالة الطباعة للجميع
+                    </button>
+                </div>
+
+                <!-- رفع القالب والخلفية المخصصة -->
+                <div class="space-y-2 text-xs">
+                    <label class="block font-bold text-slate-600">رفع تصميم / خلفية الكارنيه مخصصة:</label>
+                    <input type="file" @change="$store.apex.uploadCardTemplate($event)" accept="image/*"
+                           class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 border rounded-xl p-2 cursor-pointer bg-slate-50">
+                    <template x-if="$store.apex.cardTemplate">
+                        <div class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2">
+                            <span class="text-indigo-700 font-bold text-[11px]">
+                                <i class="fa-solid fa-check-circle text-indigo-500"></i> تم رفع القالب المخصص بنجاح
+                            </span>
+                            <button @click="$store.apex.cardTemplate=''; localStorage.removeItem('apex_card_template');"
+                                    class="text-rose-500 text-[10px] font-bold hover:text-rose-700">
+                                إزالة القالب
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- البحث والتصفية الذكية -->
+                <div class="relative text-xs">
+                    <label class="block font-bold text-slate-600 mb-1.5">بحث وتصفية الطلاب في الكارنيهات (المرحلة الرابعة):</label>
+                    <input type="text" x-model="$store.apex.searchTerms.cards" placeholder="ابحث باسم الطالب لتصفية الكروت المعروضة..."
+                           class="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:border-indigo-600">
+                </div>
+
+                <!-- شبكة كروت الطلاب المستهدفة التفاعلية (تم إعادة بنائها بالكامل) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 animate-fade-in">
+                    <template x-for="st in $store.apex.getFilteredCards()" :key="st.id">
+                        <div class="relative rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col justify-between p-4 bg-white bg-cover bg-center h-[210px] w-full max-w-[340px] mx-auto animate-fade-in"
+                             :style="$store.apex.cardTemplate ? `background-image: url('${$store.apex.cardTemplate}'); color: #1e293b;` : 'background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white;'">
+                            
+                            <div class="absolute inset-0 bg-slate-900/10 pointer-events-none"></div>
+                            
+                            <div class="relative z-10 flex justify-between items-start w-full font-semibold">
+                                <div class="space-y-1 text-right">
+                                    <h5 class="font-extrabold text-xs" :class="$store.apex.cardTemplate ? 'text-slate-800':'text-white'" x-text="st.name"></h5>
+                                    <p class="text-[9px]" :class="$store.apex.cardTemplate ? 'text-slate-600':'text-white/90'" x-text="st.year"></p>
+                                    <p class="text-[9px] font-bold" :class="$store.apex.cardTemplate ? 'text-slate-700':'text-white/95'" x-text="st.group"></p>
+                                    <p class="text-[8px]" :class="$store.apex.cardTemplate ? 'text-slate-500':'text-white/80'" x-text="'هاتف: ' + (st.phone || '-')"></p>
+                                    
+                                    <!-- شارة حالة الطباعة الملوّنة المحدثة (تم إضافة كلاس المراقبة) -->
+                                    <span class="inline-block mt-2 px-2 py-0.5 rounded text-[8px] font-bold print-status-badge"
+                                          :class="st.printedState === 'printed' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                                          x-text="st.printedState === 'printed' ? 'تمت الطباعة ✅' : 'لم تتم الطباعة ❌'"></span>
+                                </div>
+                                <div class="text-center flex flex-col items-center gap-1.5 z-10 font-bold">
+                                    <!-- صورة الطالب الشخصية أو عنصر الأيقونة التفاعلية الأنيق بدلاً من الأيقونة المكسورة (تم التعديل) -->
+                                    <template x-if="st.image">
+                                        <img :src="st.image" class="w-12 h-12 rounded-lg object-cover border-2 border-white shadow-sm">
+                                    </template>
+                                    <template x-if="!st.image">
+                                        <div class="w-12 h-12 rounded-lg bg-white/20 border-2 border-dashed border-white/40 flex items-center justify-center text-white/70 animate-pulse">
+                                            <i class="fa-solid fa-user text-lg"></i>
+                                        </div>
+                                    </template>
+                                    <!-- توليد رمز الـ QR التلقائي لكل طالب بالشبكة التفاعلية -->
+                                    <div class="bg-white p-1 rounded shadow-sm flex items-center justify-center animate-fade-in"
+                                         x-init="
+                                             $nextTick(() => {
+                                                 $el.innerHTML = '';
+                                                 if (typeof QRCode !== 'undefined') {
+                                                     new QRCode($el, {
+                                                         text: st.code,
+                                                         width: 32,
+                                                         height: 32,
+                                                         correctLevel: QRCode.CorrectLevel.H
+                                                     });
+                                                 }
+                                             });
+                                         "></div>
+                                </div>
+                            </div>
+                            
+                            <!-- تم رفع نصوص الكود السفلي بمقدار mb-3 وإبعادها عن حافة الكارت لتفادي القص والتشوه تماماً (تم التعديل الفني والضبط للمقاسات) -->
+                            <div class="relative z-10 flex justify-between items-end text-[9px] font-mono font-bold mb-3 px-1" :class="$store.apex.cardTemplate ? 'text-slate-700':'text-white/90'">
+                                <span x-text="st.code"></span>
+                                <span class="font-semibold">أكاديمية أبيكس التعليمية</span>
+                            </div>
+                            
+                            <!-- أدوات تصدير سريعة مدمجة على الكارت الفردي (تمت ترقية خيارات التحميل مع حظر شارة حالة الطباعة - المرحلة 13) -->
+                            <div class="absolute bottom-2 left-2 flex gap-1 z-20 no-print action-buttons-wrap">
+                                <button @click="$store.apex.activeStudentDetails = st;" title="تفاصيل الطالب"
+                                        class="bg-slate-900/80 hover:bg-slate-900 text-white p-1 rounded text-[8px] font-bold transition-all">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button @click="const { downloadCardElement } = window._apexCards || {}; if(downloadCardElement) downloadCardElement($el.closest('.relative'), `${st.name}_Card.pdf`, st.id);" title="تحميل الكارنيه كاملاً"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white p-1 rounded text-[8px] font-bold transition-all flex items-center gap-0.5">
+                                    <i class="fa-solid fa-id-card"></i> كارت
+                                </button>
+                                <button @click="const { downloadQRTag } = window._apexCards || {}; if(downloadQRTag) downloadQRTag(st);" title="تحميل ملصق الـ QR فقط"
+                                        class="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded text-[8px] font-bold transition-all flex items-center gap-0.5">
+                                    <i class="fa-solid fa-qrcode"></i> ملصق QR
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 12. النسخ الاحتياطي وإدارة قواعد البيانات -->
+        <div x-show="$store.apex.currentTab === 'backup'" class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-2xl border shadow-sm max-w-xl mx-auto space-y-6 text-center">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-3xl font-bold">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="font-bold text-md text-slate-800">إدارة قواعد البيانات والنسخ الاحتياطي</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">تصدير واستيراد كامل ملفات وبيانات السنتر بطريقة آمنة ومحمية</p>
+                </div>
+
+                <!-- إحصائيات قاعدة البيانات المباشرة -->
+                <div class="bg-slate-50 p-4 rounded-2xl border text-xs grid grid-cols-2 gap-3 text-right font-mono">
+                    <p>تاريخ النسخة: <span class="font-bold text-slate-800" x-text="new Date().toLocaleDateString('ar-EG')"></span></p>
+                    <p>إصدار النظام: <span class="font-bold text-indigo-600">v121</span></p>
+                    <p>الطلاب: <span class="font-bold text-emerald-600" x-text="$store.apex.students.length"></span></p>
+                    <p>الحضور: <span class="font-bold text-indigo-600" x-text="$store.apex.attendance.length"></span></p>
+                    <p>المدفوعات: <span class="font-bold text-amber-600" x-text="$store.apex.payments.length"></span></p>
+                    <p>المجموعات: <span class="font-bold text-purple-600" x-text="$store.apex.groups.length"></span></p>
+                    <p>المعلمون: <span class="font-bold text-rose-600" x-text="$store.apex.teachers.length"></span></p>
+                    <p>إجمالي السجلات: <span class="font-bold text-slate-800"
+                        x-text="$store.apex.years.length + $store.apex.halls.length + $store.apex.groups.length + $store.apex.students.length + $store.apex.attendance.length + $store.apex.payments.length + $store.apex.teachers.length"></span></p>
+                </div>
+
+                <div class="space-y-4 pt-2 border-t">
+                    <button @click="$store.apex.exportData()"
+                            class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-down text-sm"></i> تصدير نسخة احتياطية (JSON)
+                    </button>
+
+                    <!-- خيار استيراد النسخة الاحتياطية وزر تشغيل الاسترداد التفاعلي الجديد (تم التعديل) -->
+                    <div class="space-y-2 text-right text-xs border-t pt-4" x-data="{ selectedFile: null }">
+                        <label class="block font-bold text-slate-600 mb-1">استيراد واسترجاع نسخة احتياطية من ملف خارجي:</label>
+                        <div class="flex flex-col md:flex-row gap-2">
+                            <input type="file" @change="selectedFile = $event.target.files[0]" accept=".json"
+                                   class="flex-1 text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 border rounded-xl p-2 cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
+                            
+                            <!-- الزر التفاعلي المطلب الذي يظهر فور اختيار الملف لبدء الاستيراد -->
+                            <button type="button" x-show="selectedFile" @click="$store.apex.importDataDirect(selectedFile); selectedFile = null"
+                                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 animate-slide-up">
+                                <i class="fa-solid fa-file-import"></i> ابدأ استيراد الملف المختار الآن
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- زر مسح كل شيء وإعادة ضبط المصنع (المرحلة الحادية عشرة المحدثة) -->
+                    <div class="space-y-2 text-right text-xs border-t pt-4">
+                        <label class="block font-bold text-rose-600 mb-1">إجراء إداري حساس - إعادة ضبط المصنع:</label>
+                        <button @click="$store.apex.clearAllData()"
+                                class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-trash-can"></i> مسح كل شيء وإعادة تهيئة البرنامج من جديد
+                        </button>
+                        <p class="text-[10px] text-slate-400 mt-1">يقوم هذا الإجراء بحذف جميع سجلات الطلاب، الحضور، الإيرادات، والمجموعات ليعود النظام فارغاً تماماً كأول تشغيل.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 13. الإعدادات والتحكم بالنظام -->
+        <div x-show="$store.apex.currentTab === 'settings'" class="space-y-6 max-w-xl mx-auto" x-cloak>
+            <div class="bg-white rounded-2xl border shadow-sm p-6 space-y-6 text-xs">
+                <h3 class="font-bold text-slate-800 text-base border-b pb-3">إعدادات النظام وإدارة كلمة المرور</h3>
+                <form @submit.prevent="
+                    $store.apex.saveToStorage('apex_settings', $store.apex.settings);
+                    $store.apex.showToast('تم حفظ تغييرات الإعدادات بنجاح', 'success');
+                " class="space-y-4">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">اسم السنتر / المركز التعليمي:</label>
+                        <input type="text" x-model="$store.apex.settings.centerName" required
+                               class="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-indigo-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">اسم المسؤول / المدير:</label>
+                        <input type="text" x-model="$store.apex.settings.adminName" required
+                               class="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-indigo-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">العملة الافتراضية:</label>
+                        <input type="text" x-model="$store.apex.settings.currency" required
+                               class="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-indigo-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">تعديل كلمة مرور النظام الحالية:</label>
+                        <input type="text" x-model="$store.apex.settings.password" required
+                               class="w-full px-4 py-2.5 rounded-xl border text-sm font-mono focus:outline-none focus:border-indigo-600">
+                        <p class="text-[10px] text-slate-400 mt-1">تستخدم لحماية النظام عند فتح البرنامج.</p>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-md">
+                        حفظ التغييرات في الإعدادات
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- تفاصيل الطالب المنبثقة التفاعلية (تم ترقيتها بربط ذكي محصن بالكامل - تم الإصلاح والتحقيق) -->
+<div x-show="$store.apex.activeStudentDetails"
+     class="fixed inset-0 bg-slate-950/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm"
+     x-cloak>
+    <div class="bg-white max-w-xl w-full rounded-3xl p-6 shadow-2xl space-y-6 text-right relative border animate-slide-up"
+         @click.away="$store.apex.activeStudentDetails = null">
+        <button @click="$store.apex.activeStudentDetails = null"
+                class="absolute top-4 left-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500">
+            <i class="fa-solid fa-times"></i>
+        </button>
+
+        <div class="flex gap-4 items-center border-b pb-4">
+            <!-- الصورة الشخصية أو عنصر الأيقونة التفاعلية الأنيق بدلاً من الأيقونة المكسورة (تم التعديل) -->
+            <template x-if="$store.apex.activeStudentDetails?.image">
+                <img :src="$store.apex.activeStudentDetails.image" class="w-16 h-16 rounded-2xl object-cover border shadow-sm">
+            </template>
+            <template x-if="!$store.apex.activeStudentDetails?.image">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-50 border-2 border-dashed border-indigo-200 flex items-center justify-center text-indigo-400 animate-pulse">
+                    <i class="fa-solid fa-user text-2xl"></i>
+                </div>
+            </template>
+            
+            <div class="space-y-1 text-xs">
+                <h3 class="font-extrabold text-sm text-slate-800"
+                    x-text="$store.apex.activeStudentDetails?.name"></h3>
+                <p class="text-xs text-indigo-600 font-mono font-bold"
+                   x-text="$store.apex.activeStudentDetails?.code"></p>
+                <p class="text-slate-500 text-[10px]"
+                   x-text="($store.apex.activeStudentDetails?.year||'') + ' - ' + ($store.apex.activeStudentDetails?.group||'')"></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-2 bg-slate-50 p-4 rounded-2xl border">
+                <h4 class="font-bold text-indigo-600 border-b pb-1">
+                    <i class="fa-solid fa-info-circle"></i> البيانات الأساسية والمالية
+                </h4>
+                <p>هاتف الطالب: <span class="font-mono font-bold" x-text="$store.apex.activeStudentDetails?.phone || '-'"></span></p>
+                <p>هاتف ولي الأمر: <span class="font-mono font-bold" x-text="$store.apex.activeStudentDetails?.parentPhone || '-'"></span></p>
+                <p>المدرسة: <span class="font-bold" x-text="$store.apex.activeStudentDetails?.school || '-'"></span></p>
+                <p>تاريخ التسجيل: <span class="font-mono" x-text="$store.apex.activeStudentDetails?.regDate"></span></p>
+                <div class="border-t pt-2 mt-1">
+                    <p class="text-emerald-600 font-bold" x-text="'المدفوع: ' + $store.apex.getStudentStats($store.apex.activeStudentDetails?.id).paid + ' ج.م'"></p>
+                    <p class="text-rose-600 font-bold" x-text="'المتبقي: ' + $store.apex.getStudentStats($store.apex.activeStudentDetails?.id).remaining + ' ج.م'"></p>
+                </div>
+            </div>
+
+            <div class="space-y-2 bg-slate-50 p-4 rounded-2xl border flex flex-col justify-between items-center text-center">
+                <h4 class="font-bold text-indigo-600 border-b pb-1 w-full">
+                    <i class="fa-solid fa-qrcode"></i> كود QR مخصص
+                </h4>
+                <!-- مراقب ذكي مدمج يولد كود الـ QR لحظياً عند رصد تغيير اسم الطالب لمنع التجمد (تم الإصلاح) -->
+                <div id="details-qrcode-box" class="bg-white p-2 rounded-xl shadow-sm flex items-center justify-center"
+                     x-init="
+                         $watch('$store.apex.activeStudentDetails', (st) => {
+                             if (st) {
+                                 $nextTick(() => {
+                                     $el.innerHTML = '';
+                                     if (typeof QRCode !== 'undefined') {
+                                         new QRCode($el, {
+                                             text: st.code,
+                                             width: 90,
+                                             height: 90,
+                                             correctLevel: QRCode.CorrectLevel.H
+                                         });
+                                     }
+                                 });
+                             }
+                         });
+                     }"></div>
+            </div>
+        </div>
+
+        <div class="space-y-2 text-xs">
+            <h4 class="font-bold text-slate-700">
+                <i class="fa-solid fa-clock-rotate-left"></i> سجل الحضور الأخير:
+            </h4>
+            <div class="max-h-24 overflow-y-auto space-y-1.5 font-mono">
+                <template x-for="att in $store.apex.attendance.filter(a => a.studentId === $store.apex.activeStudentDetails?.id)" :key="att.id">
+                    <div class="p-1.5 bg-slate-50 border rounded-xl flex justify-between">
+                        <span class="font-bold text-slate-700" x-text="att.date"></span>
+                        <span class="text-slate-500" x-text="att.time"></span>
+                        <span class="text-slate-400 text-[9px]" x-text="att.group"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>

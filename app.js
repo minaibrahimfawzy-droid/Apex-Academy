@@ -40,12 +40,21 @@ document.addEventListener('alpine:init', () => {
         editingStudent: null,
         lastScannedStudent: { code: '', time: 0 },
         
-        // متغيرات فحص الترخيص والقفل السحابي عن بعد (التعديل الثاني عشر)
+        // وضع الترخيص والقفل السحابي عن بعد
         isRemoteLocked: false,
         remoteLockMessage: '',
         licenseUrl: 'https://raw.githubusercontent.com/username/repo/main/license.json', 
         
-        // فلترة طباعة الكارنيهات (المرحلة الخامسة)
+        // متغيرات تتبع الفترة التجريبية وكود التفعيل الرياضي المطور (المرحلة الرابعة عشر)
+        trialDaysDuration: 7, // مدة الفترة التجريبية بالأيام
+        isTrialExpired: false,
+        isActivated: false, // حالة التفعيل الدائم مدى الحياة
+        deviceCode: '', // كود الجهاز المثبت محلياً
+        activationInput: '', // حقل إدخال كود العميل
+        trialRemainingText: '',
+        trialTimeCreated: null,
+        
+        // فلترة طباعة الكارنيهات
         cardPrintFilter: 'all', // 'all', 'printed', 'not_printed'
         
         // إدارة التقارير التفاعلية (المرحلة السابعة)
@@ -62,7 +71,7 @@ document.addEventListener('alpine:init', () => {
             { id: 'teachers', name: '👨‍🏫 تقرير أداء المعلمين وعمولاتهم' }
         ],
 
-        // حقول وعناصر البحث الذكي الحصرية لكل جدول (المرحلة الرابعة)
+        // حقول وعناصر البحث الذكي الحصرية لكل جدول
         searchTerms: {
             students: '',
             cards: '',
@@ -98,12 +107,22 @@ document.addEventListener('alpine:init', () => {
                 this.isUnlocked = false;
             }
 
-            // توليد بيانات وهمية عند التشغيل للمرة الأولى لتسهيل المعاينة والاختبار
+            // توليد كود جهاز ثابت وعشوائي بين (1000 و 9999) عند تشغيل البرنامج لأول مرة
+            let savedDeviceCode = localStorage.getItem('apex_device_id');
+            if (!savedDeviceCode) {
+                savedDeviceCode = String(Math.floor(1000 + Math.random() * 9000));
+                localStorage.setItem('apex_device_id', savedDeviceCode);
+            }
+            this.deviceCode = savedDeviceCode;
+
+            // تم إيقاف توليد البيانات التجريبية الافتراضية
+            /*
             if (this.students.length === 0 && this.groups.length === 0 && this.years.length === 0) {
                 this.seedInitialData();
             }
+            */
 
-            // إظهار نافذة التحديث الجديد مرة واحدة فقط (المرحلة الثانية عشرة)
+            // إظهار نافذة التحديث الجديد مرة واحدة فقط
             const viewed = localStorage.getItem('apex_version_changelog_viewed');
             if (viewed !== '121') {
                 this.showChangelogModal = true;
@@ -111,51 +130,15 @@ document.addEventListener('alpine:init', () => {
 
             this.addLog('تشغيل التطبيق', 'تم فتح نظام أكاديمية أبيكس المطور بنسخته المستقرة v121');
             
-            // فحص ترخيص النسخة واستدعاء القفل التلقائي عن بعد (التعديل الثاني عشر)
+            // فحص ترخيص النسخة واستدعاء القفل التلقائي عن بعد
             this.checkRemoteLicense();
+
+            // فحص وتأمين الفترة التجريبية وكود التفعيل الرياضي أوفلاين
+            this.checkTrialLicense();
         },
 
         seedInitialData() {
-            this.years = [
-                { id: 1, name: 'الصف الأول الثانوي' },
-                { id: 2, name: 'الصف الثاني الثانوي' },
-                { id: 3, name: 'الصف الثالث الثانوي' }
-            ];
-            this.halls = [
-                { id: 1, name: 'قاعة الأوائل', capacity: 100 },
-                { id: 2, name: 'قاعة النخبة', capacity: 60 }
-            ];
-            this.teachers = [
-                { id: 1, name: 'أ. حسام الدين محمد', subject: 'الرياضيات', phone: '01002233445', ratio: 80 },
-                { id: 2, name: 'أ. رانيا شاهين', subject: 'اللغة الإنجليزية', phone: '01223344556', ratio: 75 }
-            ];
-            this.groups = [
-                { id: 1, name: 'مجموعة أ - رياضيات أول ثانوي', year: 'الصف الأول الثانوي', price: 150, hallId: 1, teacherId: 1, hall: 'قاعة الأوائل', teacher: 'أ. حسام الدين محمد', days: 'السبت والاثنين والأربعاء', time: '03:00 م - 05:00 م' },
-                { id: 2, name: 'مجموعة ب - إنجليزي ثاني ثانوي', year: 'الصف الثاني الثانوي', price: 200, hallId: 2, teacherId: 2, hall: 'قاعة النخبة', teacher: 'أ. رانيا شاهين', days: 'الأحد والثلاثاء والخميس', time: '05:00 م - 07:00 م' }
-            ];
-            this.students = [
-                { id: 1, code: 'ST-1001', name: 'أحمد محمود علي إسماعيل', year: 'الصف الأول الثانوي', group: 'مجموعة أ - رياضيات أول ثانوي', phone: '01122334455', parentPhone: '01556677889', school: 'الخديوية الثانوية', regDate: new Date().toLocaleDateString('ar-EG'), image: '', printedState: 'not_printed', requiredAmount: 150 },
-                { id: 2, code: 'ST-1002', name: 'سارة عبد الرحمن محمد كامل', year: 'الصف الثاني الثانوي', group: 'مجموعة ب - إنجليزي ثاني ثانوي', phone: '01228899001', parentPhone: '01004455667', school: 'أم المؤمنين الثانوية', regDate: new Date().toLocaleDateString('ar-EG'), image: '', printedState: 'not_printed', requiredAmount: 200 }
-            ];
-            this.payments = [
-                { id: 1, studentId: 1, amount: 150, month: 'سبتمبر', date: new Date().toLocaleDateString('ar-EG') }
-            ];
-            this.financeRecords = [
-                { id: 1, type: 'income', title: 'تحصيل اشتراك الطالب أحمد محمود', category: 'اشتراكات', amount: 150, date: new Date().toLocaleDateString('ar-EG') },
-                { id: 2, type: 'expense', title: 'شراء أقلام سبورة وأدوات مكتبية', category: 'أدوات مكتبية', amount: 50, date: new Date().toLocaleDateString('ar-EG') }
-            ];
-            this.logs = [
-                { id: 1, action: 'تثبيت النظام', detail: 'تم تهيئة النظام بالبيانات الأولية الافتراضية بنجاح v121', time: new Date().toLocaleTimeString('ar-EG') }
-            ];
-
-            this.saveToStorage('apex_years', this.years);
-            this.saveToStorage('apex_halls', this.halls);
-            this.saveToStorage('apex_teachers', this.teachers);
-            this.saveToStorage('apex_groups', this.groups);
-            this.saveToStorage('apex_students', this.students);
-            this.saveToStorage('apex_payments', this.payments);
-            this.saveToStorage('apex_finance_records', this.financeRecords);
-            this.saveToStorage('apex_logs', this.logs);
+            // دالة التوليد أصبحت فارغة لعدم إدخال أي أسماء غير مرغوبة تلقائياً
         },
 
         loadFromStorage(key, defaultValue) {
@@ -191,11 +174,11 @@ document.addEventListener('alpine:init', () => {
             
             return {
                 students: this.students.filter(s => 
-                    s.name.toLowerCase().includes(q) || 
-                    s.code.toLowerCase().includes(q) || 
+                    (s.name && s.name.toLowerCase().includes(q)) || 
+                    (s.code && s.code.toLowerCase().includes(q)) || 
                     (s.phone && s.phone.includes(q)) ||
                     (s.parentPhone && s.parentPhone.includes(q)) ||
-                    s.group.toLowerCase().includes(q)
+                    (s.group && s.group.toLowerCase().includes(q))
                 ).slice(0, 5),
                 teachers: this.teachers.filter(t => 
                     t.name.toLowerCase().includes(q) || 
@@ -341,7 +324,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteGroup(id) {
             if (confirm('هل أنت متأكد من حذف هذه المجموعة؟ لن يتم حذف الطلاب المرتبطين بها.')) {
-                const g = this.groups.find(gr => gr.id === id);
+                const g = this.groups.find(gr => gr.id !== id);
                 this.groups = this.groups.filter(gr => gr.id !== id);
                 this.saveToStorage('apex_groups', this.groups);
                 this.addLog('حذف مجموعة', `تم حذف المجموعة ${g ? g.name : ''}`);
@@ -497,7 +480,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteHall(id) {
             if (confirm('هل أنت متأكد من حذف هذه القاعة؟')) {
-                const h = this.halls.find(ha => ha.id === id);
+                const h = this.halls.find(ha => ha.id !== id);
                 this.halls = this.halls.filter(ha => ha.id !== id);
                 this.saveToStorage('apex_halls', this.halls);
                 this.addLog('حذف قاعة', `تم حذف القاعة ${h ? h.name : ''}`);
@@ -529,7 +512,7 @@ document.addEventListener('alpine:init', () => {
 
         deleteYear(id) {
             if (confirm('هل أنت متأكد من حذف هذه السنة الدراسية؟')) {
-                const y = this.years.find(ye => ye.id === id);
+                const y = this.years.find(ye => ye.id !== id);
                 this.years = this.years.filter(ye => ye.id !== id);
                 this.saveToStorage('apex_years', this.years);
                 this.addLog('حذف سنة دراسية', `تم حذف المرحلة ${y ? y.name : ''}`);
@@ -537,7 +520,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // دالة الفحص السحابي والتحقق من الإنترنت (التعديل الثاني عشر)
+        // دالة الفحص السحابي والتحقق من الترخيص عن بعد
         async checkRemoteLicense() {
             const localLockStatus = localStorage.getItem('apex_remote_locked');
             if (localLockStatus === 'true') {
@@ -590,6 +573,11 @@ document.addEventListener('alpine:init', () => {
                     localStorage.removeItem('apex_is_unlocked');
                     localStorage.removeItem('apex_remote_locked');
                     localStorage.removeItem('apex_remote_lock_msg');
+                    localStorage.removeItem('apex_trial_start');
+                    localStorage.removeItem('apex_trial_last_active');
+                    localStorage.removeItem('apex_trial_expired_flag');
+                    localStorage.removeItem('apex_is_activated');
+                    localStorage.removeItem('apex_device_id');
                     
                     this.showToast('تم مسح وإعادة تهيئة النظام بنجاح، جاري إعادة التشغيل...', 'success');
                     
@@ -599,6 +587,74 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     this.showToast('فشل التحقق: كلمة المرور غير صحيحة، تم إلغاء عملية المسح', 'error');
                 }
+            }
+        },
+
+        // فحص وتأمين الفترة التجريبية أوفلاين مع كشف التلاعب بالساعة (المرحلة الرابعة عشر)
+        checkTrialLicense() {
+            const now = Date.now();
+            
+            // فحص حالة التفعيل الفعلي مدى الحياة أولاً لتخطي أي قيود تجريبية
+            const activeFlag = localStorage.getItem('apex_is_activated');
+            if (activeFlag === 'true') {
+                this.isActivated = true;
+                this.isTrialExpired = false;
+                return;
+            }
+
+            const trialStart = localStorage.getItem('apex_trial_start');
+            const lastActive = Number(localStorage.getItem('apex_trial_last_active')) || 0;
+            const durationMs = this.trialDaysDuration * 24 * 60 * 60 * 1000;
+
+            if (!trialStart) {
+                localStorage.setItem('apex_trial_start', String(now));
+                localStorage.setItem('apex_trial_last_active', String(now));
+                this.trialTimeCreated = now;
+            } else {
+                this.trialTimeCreated = Number(trialStart);
+                
+                // كشف تلاعب وقت ساعة كمبيوتر السنتر للوراء
+                if (now < lastActive) {
+                    this.isTrialExpired = true;
+                    this.trialRemainingText = "⚠️ تم كشف تلاعب في ساعة وتاريخ الجهاز! تم قفل النظام لحماية التراخيص.";
+                    localStorage.setItem('apex_trial_expired_flag', 'true');
+                    return;
+                }
+                localStorage.setItem('apex_trial_last_active', String(now));
+            }
+
+            const expiredFlag = localStorage.getItem('apex_trial_expired_flag');
+            if (expiredFlag === 'true') {
+                this.isTrialExpired = true;
+                this.trialRemainingText = "❌ انتهت الفترة التجريبية المجانية المحددة للبرنامج (7 أيام). يرجى التفعيل لفتح النظام.";
+                return;
+            }
+
+            const timeElapsed = now - this.trialTimeCreated;
+            const timeRemaining = durationMs - timeElapsed;
+
+            if (timeRemaining <= 0) {
+                this.isTrialExpired = true;
+                this.trialRemainingText = "❌ انتهت الفترة التجريبية المجانية المحددة للبرنامج (7 أيام). يرجى التفعيل لفتح النظام.";
+                localStorage.setItem('apex_trial_expired_flag', 'true');
+            } else {
+                const daysLeft = Math.floor(timeRemaining / (24 * 60 * 60 * 1000));
+                const hoursLeft = Math.floor((timeRemaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                this.trialRemainingText = `⏳ إصدار تجريبي: متبقي ${daysLeft} يوم و ${hoursLeft} ساعة على انتهاء الفترة التجريبية المجانية للسنتر.`;
+            }
+        },
+
+        // دالة تفعيل البرنامج برمجياً بالمعادلة الرياضية السرية (كود الجهاز × 7) - مطلب المرحلة 13 و 14
+        activateApp() {
+            const correctKey = Number(this.deviceCode) * 7;
+            if (Number(this.activationInput.trim()) === correctKey) {
+                localStorage.setItem('apex_is_activated', 'true');
+                this.isActivated = true;
+                this.isTrialExpired = false;
+                this.showToast('تم تفعيل وترخيص برنامج الأكاديمية بنجاح مدى الحياة! ✅', 'success');
+                setTimeout(() => window.location.reload(), 1100);
+            } else {
+                this.showToast('كود التفعيل غير صحيح! يرجى مراجعة مطور النظام ❌', 'error');
             }
         },
 
@@ -671,91 +727,168 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // أدوات تصدير التقارير وجداول البيانات للطباعة عالية الدقة (المرحلة الثالثة)
+        // دالة قراءة واستيراد الملف المختار مباشرة للباك آب (التعديل الحادي عشر المطور)
+        importDataDirect(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    
+                    if (parsed.students) { this.students = parsed.students; this.saveToStorage('apex_students', this.students); }
+                    if (parsed.groups) { this.groups = parsed.groups; this.saveToStorage('apex_groups', this.groups); }
+                    if (parsed.teachers) { this.teachers = parsed.teachers; this.saveToStorage('apex_teachers', this.teachers); }
+                    if (parsed.halls) { this.halls = parsed.halls; this.saveToStorage('apex_halls', this.halls); }
+                    if (parsed.years) { this.years = parsed.years; this.saveToStorage('apex_years', this.years); }
+                    if (parsed.attendance) { this.attendance = parsed.attendance; this.saveToStorage('apex_attendance', this.attendance); }
+                    if (parsed.payments) { this.payments = parsed.payments; this.saveToStorage('apex_payments', this.payments); }
+                    if (parsed.financeRecords) { this.financeRecords = parsed.financeRecords; this.saveToStorage('apex_finance_records', this.financeRecords); }
+                    if (parsed.logs) { this.logs = parsed.logs; this.saveToStorage('apex_logs', this.logs); }
+                    if (parsed.settings) { this.settings = parsed.settings; this.saveToStorage('apex_settings', this.settings); }
+                    if (parsed.archivedYears) { this.saveToStorage('apex_archived_years', parsed.archivedYears); }
+
+                    this.addLog('استيراد بيانات', 'تم استيراد نسخة احتياطية كاملة وتعديل قواعد البيانات');
+                    this.showToast('تم استيراد النسخة الاحتياطية وتحديث قواعد البيانات بالكامل بنجاح ✅', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } catch (err) {
+                    console.error(err);
+                    this.showToast('خطأ في قراءة ملف النسخة الاحتياطية المرفوع', 'error');
+                }
+            };
+            reader.readAsText(file);
+        },
+
+        // طباعة جداول وكشوف التقارير والتحصيل بنظام html2pdf المستقر كلياً (تم الإصلاح)
         async printTable(title, headers, rows, filename = 'Students_Report.pdf') {
-            this.showToast('جاري تحضير ملف الطباعة...', 'info');
+            const store = this;
+            store.showToast('جاري تحضير ملف الطباعة...', 'info');
 
             const reportContainer = document.createElement('div');
-            reportContainer.style.position = 'absolute';
-            reportContainer.style.left = '-9999px';
-            reportContainer.style.top = '-9999px';
-            reportContainer.style.width = '800px';
-            reportContainer.style.padding = '40px';
+            reportContainer.style.width = '170mm'; // يناسب صفحة A4 تماماً بدون تداخل
+            reportContainer.style.padding = '10mm';
             reportContainer.style.background = '#ffffff';
             reportContainer.style.direction = 'rtl';
             reportContainer.style.fontFamily = "'Cairo', sans-serif";
             reportContainer.style.color = '#334155';
 
             reportContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-b: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 48px; height: 48px; background: #4f46e5; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">A</div>
-                        <div>
-                            <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #1e293b;">أكاديمية أبيكس التعليمية</h2>
-                            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">تقرير ومخرجات النظام الموحد لإدارة السنتر</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-b: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px; direction: rtl;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold;">A</div>
+                        <div style="text-align: right;">
+                            <h2 style="margin: 0; font-size: 16px; font-weight: 800; color: #1e293b;">أكاديمية أبيكس التعليمية</h2>
+                            <p style="margin: 2px 0 0 0; font-size: 9px; color: #64748b;">النظام الموحد لإدارة السنتر</p>
                         </div>
                     </div>
                     <div style="text-align: left;">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #4f46e5;">${title}</h3>
+                        <h3 style="margin: 0; font-size: 13px; font-weight: bold; color: #4f46e5;">${title}</h3>
                         <p style="margin: 2px 0 0 0; font-size: 10px; color: #64748b; font-family: monospace;">التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
                     </div>
                 </div>
-                <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 11px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 10px; direction: rtl;">
                     <thead>
                         <tr style="background: #f8fafc; color: #475569; border-bottom: 2px solid #cbd5e1;">
-                            ${headers.map(h => `<th style="padding: 10px; font-weight: 700; border-bottom: 2px solid #cbd5e1;">${h}</th>`).join('')}
+                            ${headers.map(h => `<th style="padding: 8px; font-weight: 700; border-bottom: 2px solid #cbd5e1; text-align: right;">${h}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
                         ${rows.map((row, idx) => `
                             <tr style="border-bottom: 1px solid #f1f5f9; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                                ${row.map(val => `<td style="padding: 10px; color: #334155;">${val}</td>`).join('')}
+                                ${row.map(val => `<td style="padding: 8px; color: #334155; text-align: right;">${val}</td>`).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
-                <div style="margin-top: 40px; border-t: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+                <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; direction: rtl;">
                     <span>أكاديمية أبيكس v121</span>
-                    <span>توقيع مسؤول المركز: ____________________</span>
+                    <span>توقيع المشرف: ____________________</span>
                 </div>
             `;
 
             document.body.appendChild(reportContainer);
 
-            try {
-                const canvas = await html2canvas(reportContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true
+            if (typeof html2pdf !== 'undefined') {
+                const opt = {
+                    margin: 10,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(reportContainer).save().then(() => {
+                    document.body.removeChild(reportContainer);
+                    store.showToast('تم تحميل التقرير بنجاح ✅', 'success');
+                }).catch(err => {
+                    console.error(err);
+                    document.body.removeChild(reportContainer);
+                    store.showToast('حدث خطأ أثناء تحميل الملف', 'error');
                 });
-
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const imgWidth = 210;
-                const pageHeight = 297;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-
-                pdf.save(filename);
-                this.showToast('تم تصدير وحفظ التقرير بصيغة PDF بنجاح', 'success');
-            } catch (e) {
-                console.error(e);
-                this.showToast('تعذر إنشاء ملف الـ PDF حالياً', 'error');
-            } finally {
+            } else {
+                window.print();
                 document.body.removeChild(reportContainer);
             }
+        },
+
+        // فحص وتصفية الكارنيهات بذكاء لحمايتها تماماً ضد القيم الفارغة والـ Null-Pointer Crashes (تم الإصلاح والتحصين الشامل للمتغيرات)
+        getFilteredCards() {
+            return this.students.filter(s => {
+                const q = this.searchTerms.cards.toLowerCase().trim();
+                const matchesSearch = !q || 
+                    (s.name && s.name.toLowerCase().includes(q)) || 
+                    (s.code && s.code.toLowerCase().includes(q)) || 
+                    (s.phone && s.phone.toLowerCase().includes(q)) || 
+                    (s.group && s.group.toLowerCase().includes(q));
+                
+                const pState = s.printedState || 'not_printed';
+                
+                if (this.cardPrintFilter === 'printed') {
+                    return matchesSearch && pState === 'printed';
+                } else if (this.cardPrintFilter === 'not_printed') {
+                    return matchesSearch && pState === 'not_printed';
+                }
+                return matchesSearch;
+            });
+        },
+
+        // دالة وسم الطلاب كـ "مطبوعين" بعد نجاح تصدير الـ PDF وإجبار المتصفح على تحديث الواجهة والـ Badges فوراً (تم الإصلاح)
+        markAsPrinted(ids) {
+            this.students.forEach(s => {
+                if (ids.includes(s.id)) {
+                    s.printedState = 'printed';
+                }
+            });
+            // تفعيل تفاعلية الأري المشفر لتقرأه واجهة Alpine.js في ثانية وتحدّث الشاشة والـ Badges تلقائياً
+            this.students = [...this.students];
+            this.saveToStorage('apex_students', this.students);
+        },
+
+        // زر مسح وإعادة تعيين حالة الطباعة للجميع مع تحديث الواجهة اللحظي (تم الإصلاح والترقية لتعمل فورياً على الشاشة)
+        resetPrintStatus() {
+            if (confirm('هل أنت متأكد من إعادة تعيين حالة الطباعة لكافة الطلاب لتبدو لم تتم الطباعة؟')) {
+                this.students.forEach(s => s.printedState = 'not_printed');
+                // تفعيل التفاعلية اللحظية لتحديث الكروت على الشاشة فوراّ وحل مشكلة التجمد
+                this.students = [...this.students];
+                this.saveToStorage('apex_students', this.students);
+                this.showToast('تم إعادة تعيين حالة طباعة الكارنيهات لجميع الطلاب بنجاح ✅', 'success');
+            }
+        },
+
+        // رفع وحفظ قالب الكارنيه وتعديل المرجع لمنع مشكلة التجمد أو عدم ظهور الخلفية (تم الإصلاح الجذري الفوري - المرحلة 13)
+        uploadCardTemplate(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const store = this; // حفظ المرجع لربطه بالستور البرمجي مباشرة
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                store.cardTemplate = e.target.result;
+                localStorage.setItem('apex_card_template', store.cardTemplate);
+                store.showToast('تم تحميل وتطبيق تصميم خلفية الكارنيه بنجاح ✅', 'success');
+            };
+            reader.readAsDataURL(file);
         },
 
         triggerUpdate() {
@@ -767,150 +900,233 @@ document.addEventListener('alpine:init', () => {
     });
 });
 
-// خدمات طباعة الكارنيهات عالية الدقة (المرحلة الثالثة والخامسة)
+// خدمات طباعة الكارنيهات المجمعة والفردية وملصقات الترخيص عبر html2pdf لمنع أي خطأ وتوفير تصدير فائق الدقة (تم الإصلاح الشامل للمرحلة 13)
 window._apexCards = {
     generateCardQR(code) {
         const container = document.getElementById('qrcode-card-box');
         if (!container) return;
         container.innerHTML = '';
-        new QRCode(container, {
-            text: code,
-            width: 45,
-            height: 45,
-            correctLevel: QRCode.CorrectLevel.H
-        });
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(container, {
+                text: code,
+                width: 45,
+                height: 45,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
     },
     async downloadSingleCard(student, template) {
         const area = document.getElementById('card-preview-area');
         if (!area) return;
         
-        const imgs = area.querySelectorAll('img');
-        await Promise.all(Array.from(imgs).map(img => {
-            if (img.complete) return Promise.resolve();
-            return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
-        }));
-
-        const canvas = await html2canvas(area, {
-            scale: 3,
-            useCORS: true,
-            allowTaint: true
+        const opt = {
+            margin: 0,
+            filename: `${student.name}_Card.pdf`,
+            image: { type: 'jpeg', quality: 1.0 }, // دقة وجودة كاملة
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // Retina Scale لجودة ممتازة
+            jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
+        };
+        
+        html2pdf().set(opt).from(area).save().then(() => {
+            const store = Alpine.store('apex');
+            store.markAsPrinted([student.id]);
+        }).catch(err => {
+            console.error(err);
         });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'mm',
-            format: [85.6, 54]
-        });
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
-        pdf.save(`${student.name}_Card.pdf`);
-        
-        const store = Alpine.store('apex');
-        store.markAsPrinted([student.id]);
     },
+    // دالة التنزيل الفردي المحسنة لتقوم بإخفاء شارات حالة الطباعة من ملف الكارت المطبوع ليكون نظيفاً ومهنياً (تم الإصلاح بناءً على طلبك)
+    async downloadCardElement(element, filename, studentId) {
+        const store = Alpine.store('apex');
+        store.showToast('جاري تحضير الكارت للتحميل الحجمي...', 'info');
+        
+        // إخفاء مؤقت لأزرار التحكم والشارات الإدارية أثناء التقاط الصورة وحفظ الملف
+        const buttons = element.querySelector('.action-buttons-wrap');
+        const badge = element.querySelector('.print-status-badge');
+        
+        if (buttons) buttons.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+
+        // إزالة ظلال وحدود الكارت الخارجية مؤقتاً لمنع تداخل المقاسات والصفحات الفارغة (تم الإصلاح الجذري)
+        const originalShadow = element.style.boxShadow;
+        const originalBorder = element.style.border;
+        element.style.boxShadow = 'none';
+        element.style.border = 'none';
+
+        const opt = {
+            margin: 0,
+            filename: filename,
+            image: { type: 'jpeg', quality: 1.0 },
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true },
+            jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            if (buttons) buttons.style.display = 'flex';
+            if (badge) badge.style.display = 'inline-block';
+            element.style.boxShadow = originalShadow;
+            element.style.border = originalBorder;
+            store.markAsPrinted([studentId]);
+            store.showToast('تم تنزيل الكارنيه الفردي بنجاح ✅', 'success');
+        }).catch(err => {
+            console.error(err);
+            if (buttons) buttons.style.display = 'flex';
+            if (badge) badge.style.display = 'inline-block';
+            element.style.boxShadow = originalShadow;
+            element.style.border = originalBorder;
+            store.showToast('حدث خطأ أثناء التنزيل الفردي', 'error');
+        });
+    },
+    // دالة تصدير ملصق الـ QR المخصص فقط بمقاس 70mm x 50mm المذهل دون التصميم (مطلب جديد ومطور - المرحلة 13)
+    async downloadQRTag(student) {
+        const store = Alpine.store('apex');
+        store.showToast('جاري تصدير ملصق الـ QR الفني الخاص بالطالب...', 'info');
+
+        // بناء حاوية ملصق مخصصة في الـ DOM
+        const tagEl = document.createElement('div');
+        tagEl.style.width = '70mm';
+        tagEl.style.height = '50mm';
+        tagEl.style.background = '#ffffff';
+        tagEl.style.color = '#1e293b';
+        tagEl.style.padding = '5mm';
+        tagEl.style.boxSizing = 'border-box';
+        tagEl.style.display = 'flex';
+        tagEl.style.flexDirection = 'column';
+        tagEl.style.alignItems = 'center';
+        tagEl.style.justifyContent = 'center';
+        tagEl.style.fontFamily = "'Cairo', sans-serif";
+        tagEl.style.direction = 'rtl';
+        tagEl.style.textAlign = 'center';
+        tagEl.style.border = '1px solid #e2e8f0';
+
+        tagEl.innerHTML = `
+            <div style="font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">أكاديمية أبيكس التعليمية</div>
+            <div style="font-size: 10px; font-weight: bold; color: #4f46e5; margin-bottom: 4px;">ملصق عضوية الطالب</div>
+            
+            <div class="qr-tag-box" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: center;"></div>
+            
+            <div style="font-size: 9px; font-weight: 800; color: #0f172a; line-height: 1.2; max-width: 100%; word-break: break-word;">${student.name}</div>
+            <div style="font-size: 8px; font-family: monospace; font-weight: bold; color: #64748b; margin-top: 1px;">كود الطالب: ${student.code}</div>
+        `;
+
+        document.body.appendChild(tagEl);
+
+        const qrBox = tagEl.querySelector('.qr-tag-box');
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrBox, {
+                text: student.code,
+                width: 75,
+                height: 75,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        await new Promise(r => setTimeout(r, 400));
+
+        const opt = {
+            margin: 0,
+            filename: `${student.name}_QR_Tag.pdf`,
+            image: { type: 'jpeg', quality: 1.0 },
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // جودة طباعة نقية للـ QR
+            jsPDF: { unit: 'mm', format: [70, 50], orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(tagEl).save().then(() => {
+            document.body.removeChild(tagEl);
+            store.showToast('تم تحميل ملصق الـ QR بنجاح ✅', 'success');
+        }).catch(err => {
+            console.error(err);
+            document.body.removeChild(tagEl);
+            store.showToast('حدث خطأ أثناء تصدير الملصق', 'error');
+        });
+    },
+    // دالة تصدير الكروت المجمعة المحدثة تماماً والملغى منها شارة الطباعة الإدارية تلقائياً بجودة Retina فائقة
     async printAllCards(students, template) {
         const store = Alpine.store('apex');
         const filtered = store.getFilteredCards();
         if (filtered.length === 0) {
-            store.showToast('لا يوجد طلاب ضمن التصفية المحددة لطباعة كارنيهاتهم', 'warning');
+            store.showToast('لا يوجد طلاب ضمن التصفية لطباعة كارنيهاتهم', 'warning');
             return;
         }
 
         store.showToast('جاري إنشاء وتحضير الكارنيهات للطباعة المجمعة في ملف واحد...', 'info');
 
         const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '-9999px';
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.gap = '20px';
-        document.body.appendChild(container);
+        container.style.width = '85mm';
+        container.style.background = '#ffffff';
 
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'mm',
-            format: [85.6, 54]
-        });
+        filtered.forEach((s, idx) => {
+            const card = document.createElement('div');
+            card.style.width = '85mm';
+            card.style.height = '55mm';
+            card.style.position = 'relative';
+            card.style.borderRadius = '6mm';
+            card.style.overflow = 'hidden';
+            card.style.padding = '4mm';
+            card.style.boxSizing = 'border-box';
+            card.style.background = template ? `url(${template})` : 'linear-gradient(135deg, #4f46e5, #0ea5e9)';
+            card.style.backgroundSize = 'cover';
+            card.style.backgroundPosition = 'center';
+            card.style.color = 'white'; // تم الإصلاح الدقيق هنا ليطابق متغير حلقة الـ forEach بنجاح
+            card.style.direction = 'rtl';
+            card.style.fontFamily = "'Cairo', sans-serif";
+            if (idx < filtered.length - 1) {
+                card.style.pageBreakAfter = 'always';
+            }
 
-        for (let i = 0; i < filtered.length; i++) {
-            const s = filtered[i];
-            const cardEl = document.createElement('div');
-            cardEl.style.width = '340px';
-            cardEl.style.height = '210px';
-            cardEl.style.position = 'relative';
-            cardEl.style.borderRadius = '16px';
-            cardEl.style.overflow = 'hidden';
-            cardEl.style.display = 'flex';
-            cardEl.style.flexDirection = 'column';
-            cardEl.style.justifyContent = 'space-between';
-            cardEl.style.padding = '16px';
-            cardEl.style.boxSizing = 'border-box';
-            cardEl.style.fontFamily = "'Cairo', sans-serif";
-            cardEl.style.direction = 'rtl';
-            cardEl.style.background = template ? `url(${template})` : 'linear-gradient(135deg, #4f46e5, #0ea5e9)';
-            cardEl.style.backgroundSize = 'cover';
-            cardEl.style.backgroundPosition = 'center';
-            cardEl.style.color = 'white';
-
-            cardEl.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div style="text-align: right; font-family: 'Cairo', sans-serif;">
-                        <h5 style="margin: 0; font-size: 14px; font-weight: 800; color: white;">${s.name}</h5>
-                        <p style="margin: 2px 0 0 0; font-size: 10px; opacity: 0.9; color: white;">${s.year}</p>
-                        <p style="margin: 2px 0 0 0; font-size: 10px; opacity: 0.9; font-weight: bold; color: white;">${s.group}</p>
-                        <p style="margin: 2px 0 0 0; font-size: 9px; opacity: 0.85; color: white;">هاتف: ${s.phone || '-'}</p>
+            // تم الغاء كود ورسم شارة الطباعة من التمبلت تماماً ليبقى الكارت المطبوع نظيفاً ومهنياً وخالياً من العبارات الإدارية
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start; height: 100%;">
+                    <div style="text-align: right; color: white;">
+                        <h5 style="margin: 0; font-size: 11px; font-weight: 800; line-height: 1.2; color: white;">${s.name}</h5>
+                        <p style="margin: 2px 0 0 0; font-size: 8px; opacity: 0.9; color: white;">${s.year}</p>
+                        <p style="margin: 1px 0 0 0; font-size: 8px; opacity: 0.9; font-weight: bold; color: white;">${s.group}</p>
+                        <p style="margin: 1px 0 0 0; font-size: 7px; opacity: 0.8; color: white;">هاتف: ${s.phone || '-'}</p>
                     </div>
-                    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                        <img src="${s.image || 'https://via.placeholder.com/50'}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div class="temp-qr" style="background: white; padding: 4px; border-radius: 4px;"></div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        ${s.image ? `<img src="${s.image}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover; border: 1.5px solid white;">` : `<div style="width: 32px; height: 32px; border-radius: 4px; border: 1.5px dashed rgba(255,255,255,0.4); background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.8);"><i class="fa-solid fa-user" style="font-size: 12px;"></i></div>`}
+                        <div class="card-qr-container" style="background: white; padding: 2px; border-radius: 2px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: end; font-size: 9px; font-family: monospace; opacity: 0.9; font-weight: bold; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: end; font-size: 8px; font-family: monospace; opacity: 0.9; font-weight: bold; color: white;">
                     <span>${s.code}</span>
-                    <span style="font-family: 'Cairo', sans-serif;">أكاديمية أبيكس التعليمية</span>
+                    <span>أكاديمية أبيكس التعليمية</span>
                 </div>
             `;
+            container.appendChild(card);
 
-            container.appendChild(cardEl);
-
-            const qrEl = cardEl.querySelector('.temp-qr');
-            new QRCode(qrEl, {
-                text: s.code,
-                width: 45,
-                height: 45,
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
-            await new Promise(r => setTimeout(r, 150));
-
-            const imgs = cardEl.querySelectorAll('img');
-            await Promise.all(Array.from(imgs).map(img => {
-                if (img.complete) return Promise.resolve();
-                return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
-            }));
-
-            const canvas = await html2canvas(cardEl, {
-                scale: 3,
-                useCORS: true,
-                allowTaint: true
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            if (i > 0) {
-                pdf.addPage([85.6, 54], 'landscape');
+            const qrBox = card.querySelector('.card-qr-container');
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrBox, {
+                    text: s.code,
+                    width: 28,
+                    height: 28,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             }
-            pdf.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
-        }
+        });
 
-        pdf.save('Cards.pdf');
-        document.body.removeChild(container);
+        document.body.appendChild(container);
 
-        const ids = filtered.map(s => s.id);
-        store.markAsPrinted(ids);
-        store.showToast('تم حفظ ملف الكارنيهات بنجاح وتحديث الحالات تلقائياً!', 'success');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const opt = {
+            margin: 0,
+            filename: 'Cards.pdf',
+            image: { type: 'jpeg', quality: 1.0 },
+            html2canvas: { scale: 3.5, useCORS: true, allowTaint: true }, // جودة Retina طباعية فائقة وممتازة
+            jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' },
+            pagebreak: { mode: 'css' }
+        };
+
+        html2pdf().set(opt).from(container).save().then(() => {
+            const ids = filtered.map(s => s.id);
+            store.markAsPrinted(ids);
+            document.body.removeChild(container);
+            store.showToast('تمت طباعة وحفظ الكارنيهات مجمعة في ملف واحد', 'success');
+        }).catch(err => {
+            console.error(err);
+            document.body.removeChild(container);
+            store.showToast('فشل تصدير الكارنيهات المجمعة', 'error');
+        });
     }
 };
